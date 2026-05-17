@@ -41,14 +41,14 @@ async function bootstrap() {
     serverAdapter: serverAdapter,
   });
 
-  server.use(
-    '/admin/queues',
-    basicAuth({
-      users: { admin: appConfig.admin.apiKey },
-      challenge: true,
-    }),
-    serverAdapter.getRouter()
-  );
+  // Secure both Bull Board and Visual Dashboard with browser Basic Auth
+  const authMiddleware = basicAuth({
+    users: { admin: appConfig.admin.apiKey },
+    challenge: true,
+  });
+
+  server.use('/admin/queues', authMiddleware, serverAdapter.getRouter());
+  server.use('/admin/dashboard', authMiddleware);
 
   await app.listen(process.env.PORT || 3000);
 }
