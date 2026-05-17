@@ -1,6 +1,7 @@
 import { Worker, Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 import pino from 'pino';
+import * as Sentry from '@sentry/node';
 import { config } from '@trail/config';
 import { QUEUE_NAMES } from '@trail/queue';
 import { processTryOn } from './processors/tryon.processor.js';
@@ -12,6 +13,14 @@ const logger = pino({
 
 async function bootstrap() {
   logger.info('Worker starting...');
+
+  if (config.sentry.dsn) {
+    Sentry.init({
+      dsn: config.sentry.dsn,
+      tracesSampleRate: 1.0,
+      environment: process.env.NODE_ENV || 'production',
+    });
+  }
 
   const connection = new Redis(config.redis.url, {
     maxRetriesPerRequest: null,
@@ -52,6 +61,12 @@ async function bootstrap() {
 
   tryonWorker.on('failed', (job, err) => {
     logger.error({ jobId: job?.id, queue: QUEUE_NAMES.TRYON, err: err.message }, 'Job failed');
+    if (config.sentry.dsn) {
+      Sentry.captureException(err, {
+        tags: { queue: QUEUE_NAMES.TRYON, jobId: job?.id },
+        extra: { jobData: job?.data }
+      });
+    }
   });
 
   cleanupWorker.on('completed', (job) => {
@@ -60,11 +75,19 @@ async function bootstrap() {
 
   cleanupWorker.on('failed', (job, err) => {
     logger.error({ jobId: job?.id, queue: QUEUE_NAMES.CLEANUP, err: err.message }, 'Cleanup job failed');
+    if (config.sentry.dsn) {
+      Sentry.captureException(err, {
+        tags: { queue: QUEUE_NAMES.CLEANUP, jobId: job?.id }
+      });
+    }
   });
 
   // Graceful shutdown
   const shutdown = async (signal: string) => {
     logger.info(`Received ${signal}, shutting down...`);
+    if (config.sentry.dsn) {
+      await Sentry.close(2000);
+    }
     await tryonWorker.close();
     await cleanupWorker.close();
     await connection.quit();

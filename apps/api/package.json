@@ -19,6 +19,8 @@
     "@trail/db": "workspace:*",
     "@prisma/client": "^5.22.0",
     "@trail/queue": "workspace:*",
+    "@sentry/nestjs": "^8.0.0",
+    "@sentry/profiling-node": "^8.0.0",
     "@trail/storage": "workspace:*",
     "@trail/tenant": "workspace:*",
     "bullmq": "^5.76.8",

@@ -47,6 +47,9 @@ export const config = {
   admin: {
     apiKey: requireEnv('ADMIN_API_KEY'),
   },
+  sentry: {
+    dsn: process.env.SENTRY_DSN || '',
+  },
 } as const;
 
 export type Config = typeof config;

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { z } from 'zod';
+import * as Sentry from '@sentry/node';
 import { config } from '@trail/config';
 
 const SegmindResponseSchema = z.object({
@@ -57,7 +58,15 @@ export async function generateTryOn(payload: {
 
     throw new SegmindError(`Unsupported content type: ${contentType}`);
   } catch (error: any) {
-    if (error instanceof SegmindError) throw error;
+    if (error instanceof SegmindError) {
+      if (config.sentry.dsn) {
+        Sentry.captureException(error, {
+          tags: { service: 'segmind', model: payload.model },
+          extra: { payload }
+        });
+      }
+      throw error;
+    }
     
     let message = error.message;
     if (error.response) {
@@ -69,6 +78,13 @@ export async function generateTryOn(payload: {
       }
     }
       
-    throw new SegmindError(message || 'Unknown Segmind error');
+    const finalError = new SegmindError(message || 'Unknown Segmind error');
+    if (config.sentry.dsn) {
+      Sentry.captureException(finalError, {
+        tags: { service: 'segmind', model: payload.model },
+        extra: { payload }
+      });
+    }
+    throw finalError;
   }
 }

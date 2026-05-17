@@ -16,6 +16,7 @@
     "@prisma/client": "^5.22.0",
     "@trail/queue": "workspace:*",
     "@trail/ai": "workspace:*",
+    "@sentry/node": "^8.0.0",
     "@trail/storage": "workspace:*"
   }
 }

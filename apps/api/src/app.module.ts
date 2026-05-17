@@ -5,6 +5,7 @@ import { APP_GUARD, APP_FILTER } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { SentryGlobalFilter } from '@sentry/nestjs/setup';
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { TryonModule } from './modules/tryon/tryon.module';
 
@@ -27,6 +28,10 @@ import { TryonModule } from './modules/tryon/tryon.module';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: SentryGlobalFilter,
     },
     {
       provide: APP_FILTER,
