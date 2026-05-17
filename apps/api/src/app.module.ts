@@ -8,6 +8,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 import { SentryGlobalFilter } from '@sentry/nestjs/setup';
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { TryonModule } from './modules/tryon/tryon.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { TryonModule } from './modules/tryon/tryon.module';
     }]),
     TenantsModule,
     TryonModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [
