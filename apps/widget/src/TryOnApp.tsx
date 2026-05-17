@@ -8,9 +8,6 @@ interface TryOnAppProps {
   productId: string;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-const USE_MOCK = import.meta.env.VITE_USE_MOCK_RESULTS === 'true';
-
 const MOCK_CONFIG = {
   primaryColor: '#000000',
   complimentTone: 'friendly',
@@ -19,26 +16,38 @@ const MOCK_CONFIG = {
 
 const TryOnApp: React.FC<TryOnAppProps> = ({ tenantId, productId }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { config, setConfig } = useStore();
+  const { config, setConfig, runtimeConfig } = useStore();
 
   useEffect(() => {
     const fetchConfig = async () => {
+      if (runtimeConfig.debug) {
+        console.log('TryOnWidget: Fetching config from', `${runtimeConfig.apiUrl}/v1/tenant/${tenantId}/config`);
+      }
+
       try {
-        const response = await fetch(`${API_URL}/v1/tenant/${tenantId}/config`);
+        const response = await fetch(`${runtimeConfig.apiUrl}/v1/tenant/${tenantId}/config`);
         if (!response.ok) throw new Error('Failed to fetch config');
         const data = await response.json();
+        
+        if (runtimeConfig.debug) {
+          console.log('TryOnWidget: Config loaded', data);
+        }
         setConfig(data);
       } catch (error) {
         console.error('TryOnWidget: Config fetch failed', error);
-        if (USE_MOCK) {
-          console.log('TryOnWidget: Using mock config');
+        if (runtimeConfig.useMock) {
+          if (runtimeConfig.debug) {
+            console.log('TryOnWidget: Using mock config');
+          }
           setConfig(MOCK_CONFIG);
         }
       }
     };
 
-    fetchConfig();
-  }, [tenantId, setConfig]);
+    if (runtimeConfig.apiUrl || runtimeConfig.useMock) {
+      fetchConfig();
+    }
+  }, [tenantId, setConfig, runtimeConfig.apiUrl, runtimeConfig.useMock, runtimeConfig.debug]);
 
   if (!config) return null;
 

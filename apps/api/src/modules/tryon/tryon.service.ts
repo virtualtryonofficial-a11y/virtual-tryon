@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { Queue } from 'bullmq';
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 import { v4 as uuidv4 } from 'uuid';
 import { config as appConfig } from '@trail/config';
 import { 

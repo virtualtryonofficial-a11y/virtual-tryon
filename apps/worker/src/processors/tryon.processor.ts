@@ -1,5 +1,5 @@
 import { Job } from 'bullmq';
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 import pino from 'pino';
 import { TryonJobPayload } from '@trail/queue';
 import { updateTryonRequest } from '@trail/db';
@@ -73,8 +73,8 @@ export async function processTryOn(job: Job<TryonJobPayload>) {
     await updateTryonRequest(requestId, {
       status: 'completed',
       generatedImageKey: generatedKey,
-      compliment: complimentResult.compliment,
-      styleScore: complimentResult.score,
+      compliment: complimentResult!.compliment,
+      styleScore: complimentResult!.score,
       processingTimeMs: elapsed,
       complimentCached,
     });

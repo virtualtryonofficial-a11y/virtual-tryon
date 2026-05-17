@@ -24,12 +24,12 @@ export const JOB_OPTIONS: Record<keyof typeof QUEUE_NAMES, JobsOptions> = {
       type: 'exponential',
       delay: 5000,
     },
-    removeOnComplete: 100,
-    removeOnFail: 200,
+    removeOnComplete: { count: 100 },
+    removeOnFail: { count: 200 },
   },
   CLEANUP: {
     attempts: 1,
-    removeOnComplete: 10,
-    removeOnFail: 10,
+    removeOnComplete: { count: 10 },
+    removeOnFail: { count: 10 },
   },
 };

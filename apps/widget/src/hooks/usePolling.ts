@@ -8,7 +8,7 @@ const MAX_ATTEMPTS = 40;
 const usePolling = (tenantId: string, jobId: string | null) => {
   const { setResult, setError, setStatus } = useStore();
   const attemptsRef = useRef(0);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     if (!jobId || !tenantId) return;

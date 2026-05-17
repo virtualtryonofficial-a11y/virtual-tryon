@@ -2,6 +2,7 @@
   "name": "@trail/storage",
   "version": "1.0.0",
   "main": "./src/index.ts",
+  "type": "module",
   "types": "./src/index.ts",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.521.0",

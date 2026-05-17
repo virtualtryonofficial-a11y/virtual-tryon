@@ -1,10 +1,10 @@
 import { Worker, Queue } from 'bullmq';
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 import pino from 'pino';
 import { config } from '@trail/config';
-import { QUEUE_NAMES, JOB_OPTIONS } from '@trail/queue';
-import { processTryOn } from './processors/tryon.processor';
-import { processCleanup } from './processors/cleanup.processor';
+import { QUEUE_NAMES } from '@trail/queue';
+import { processTryOn } from './processors/tryon.processor.js';
+import { processCleanup } from './processors/cleanup.processor.js';
 
 const logger = pino({
   transport: { target: 'pino-pretty' },
@@ -23,7 +23,6 @@ async function bootstrap() {
     processTryOn,
     { 
       connection,
-      ...JOB_OPTIONS.TRYON 
     }
   );
 
@@ -32,7 +31,6 @@ async function bootstrap() {
     processCleanup,
     { 
       connection,
-      ...JOB_OPTIONS.CLEANUP 
     }
   );
 

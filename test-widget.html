@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Virtual Trail Runtime Config Test</title>
+  <style>
+    body { font-family: sans-serif; padding: 40px; line-height: 1.6; }
+    .controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    button { padding: 10px 20px; cursor: pointer; border-radius: 6px; border: 1px solid #ccc; background: #f9f9f9; }
+    button:hover { background: #eee; }
+    .status { margin-top: 20px; padding: 15px; border-radius: 8px; background: #f0f0f0; min-height: 50px; }
+    code { background: #e0e0e0; padding: 2px 4px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<h1>Widget Runtime Config Test</h1>
+<p>This harness tests the new <code>TryOnWidget.init</code> signature.</p>
+
+<div class="controls">
+  <button onclick="initMock()">Init Mock Mode (Debug On)</button>
+  <button onclick="initLiveWrongUrl()">Init Live (Wrong URL - Should Error)</button>
+  <button onclick="initMissingParams()">Init (Missing Params - Should Error)</button>
+</div>
+
+<div id="log" class="status">Console logs will appear here...</div>
+
+<!-- Load the locally built widget -->
+<script src="apps/widget/dist/widget.js"></script>
+
+<script>
+  const logDiv = document.getElementById('log');
+  function log(msg, type = 'info') {
+    const time = new Date().toLocaleTimeString();
+    const color = type === 'error' ? 'red' : (type === 'success' ? 'green' : 'black');
+    logDiv.innerHTML += `<div style="color: ${color}">[${time}] ${msg}</div>`;
+    console.log(`[${type}]`, msg);
+  }
+
+  function initMock() {
+    log('Initializing in MOCK mode...');
+    try {
+      TryOnWidget.init({
+        tenantId: "demo-tenant",
+        productId: "premium-jacket",
+        useMock: true,
+        debug: true
+      });
+      log('Initialization call successful. Check for floating button.', 'success');
+    } catch (e) {
+      log('Error during init: ' + e.message, 'error');
+    }
+  }
+
+  function initLiveWrongUrl() {
+    log('Initializing in LIVE mode with invalid URL...');
+    try {
+      TryOnWidget.init({
+        tenantId: "demo-tenant",
+        productId: "premium-jacket",
+        apiUrl: "http://localhost:9999", // Invalid port
+        useMock: false,
+        debug: true
+      });
+      log('Initialization call successful. Fetch will likely fail in console.', 'success');
+    } catch (e) {
+      log('Error during init: ' + e.message, 'error');
+    }
+  }
+
+  function initMissingParams() {
+    log('Initializing with missing tenantId...');
+    try {
+      TryOnWidget.init({
+        productId: "test"
+      });
+    } catch (e) {
+      log('Caught expected error: ' + e.message, 'error');
+    }
+  }
+</script>
+
+</body>
+</html>

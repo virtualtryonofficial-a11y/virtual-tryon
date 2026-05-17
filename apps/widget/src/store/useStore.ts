@@ -10,11 +10,18 @@ interface WidgetState {
   compliment: string | null;
   styleScore: number | null;
   error: string | null;
+  tenantId: string | null;
+  productId: string | null;
   config: {
     primaryColor: string;
     complimentTone: string;
     features: string[];
   } | null;
+  runtimeConfig: {
+    apiUrl: string;
+    useMock: boolean;
+    debug: boolean;
+  };
 
   // Actions
   setStatus: (status: WidgetStatus) => void;
@@ -23,6 +30,8 @@ interface WidgetState {
   setResult: (data: { image: string; compliment: string; score: number }) => void;
   setError: (error: string | null) => void;
   setConfig: (config: WidgetState['config']) => void;
+  setRuntimeConfig: (config: Partial<WidgetState['runtimeConfig']>) => void;
+  setIdentifiers: (data: { tenantId: string; productId: string }) => void;
   reset: () => void;
 }
 
@@ -34,7 +43,14 @@ export const useStore = create<WidgetState>((set) => ({
   compliment: null,
   styleScore: null,
   error: null,
+  tenantId: null,
+  productId: null,
   config: null,
+  runtimeConfig: {
+    apiUrl: '',
+    useMock: false,
+    debug: false,
+  },
 
   setStatus: (status) => set({ status }),
   setJobId: (jobId) => set({ jobId }),
@@ -47,7 +63,11 @@ export const useStore = create<WidgetState>((set) => ({
   }),
   setError: (error) => set({ error, status: 'failed' }),
   setConfig: (config) => set({ config }),
-  reset: () => set({
+  setRuntimeConfig: (config) => set((state) => ({
+    runtimeConfig: { ...state.runtimeConfig, ...config }
+  })),
+  setIdentifiers: (data) => set({ tenantId: data.tenantId, productId: data.productId }),
+  reset: () => set((state) => ({
     status: 'idle',
     jobId: null,
     userImage: null,
@@ -55,5 +75,5 @@ export const useStore = create<WidgetState>((set) => ({
     compliment: null,
     styleScore: null,
     error: null,
-  }),
+  })),
 }));

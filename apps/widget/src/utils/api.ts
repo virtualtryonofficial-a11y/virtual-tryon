@@ -1,17 +1,24 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-const USE_MOCK = import.meta.env.VITE_USE_MOCK_RESULTS === 'true';
+import { useStore } from '../store/useStore';
 
 const MOCK_STATE: Record<string, number> = {};
 
 export async function startTryOn(tenantId: string, productId: string, userImage: string): Promise<string> {
-  if (USE_MOCK) {
-    console.log('Mock Mode: Starting try-on');
+  const { runtimeConfig } = useStore.getState();
+
+  if (runtimeConfig.useMock) {
+    if (runtimeConfig.debug) {
+      console.log('TryOnWidget: [MOCK] Starting try-on for', productId);
+    }
     const jobId = 'mock-job-' + Math.random().toString(36).substring(7);
     MOCK_STATE[jobId] = 0;
     return jobId;
   }
 
-  const response = await fetch(`${API_URL}/v1/tryon`, {
+  if (runtimeConfig.debug) {
+    console.log('TryOnWidget: Starting try-on at', `${runtimeConfig.apiUrl}/v1/tryon`);
+  }
+
+  const response = await fetch(`${runtimeConfig.apiUrl}/v1/tryon`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ tenantId, productId, userImage }),
@@ -27,13 +34,17 @@ export async function startTryOn(tenantId: string, productId: string, userImage:
 }
 
 export async function getTryOnStatus(tenantId: string, jobId: string) {
-  if (USE_MOCK && jobId.startsWith('mock-job')) {
+  const { runtimeConfig } = useStore.getState();
+
+  if (runtimeConfig.useMock && jobId.startsWith('mock-job')) {
     await new Promise(resolve => setTimeout(resolve, 800)); // Simulate network latency
     
     const count = MOCK_STATE[jobId] || 0;
     MOCK_STATE[jobId] = count + 1;
 
-    console.log(`Mock Polling: ${jobId}, attempt: ${count}`);
+    if (runtimeConfig.debug) {
+      console.log(`TryOnWidget: [MOCK] Polling ${jobId}, attempt: ${count}`);
+    }
 
     if (count < 4) { // Complete after 4 polls
       return { status: 'processing' };
@@ -48,7 +59,11 @@ export async function getTryOnStatus(tenantId: string, jobId: string) {
     };
   }
 
-  const response = await fetch(`${API_URL}/v1/tryon/${jobId}?tenantId=${tenantId}`);
+  if (runtimeConfig.debug) {
+    console.log(`TryOnWidget: Polling ${jobId} at ${runtimeConfig.apiUrl}`);
+  }
+
+  const response = await fetch(`${runtimeConfig.apiUrl}/v1/tryon/${jobId}?tenantId=${tenantId}`);
   if (!response.ok) throw new Error('Failed to fetch status');
   return await response.json();
 }

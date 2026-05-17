@@ -2,6 +2,7 @@
   "name": "@trail/db",
   "version": "1.0.0",
   "main": "./src/index.ts",
+  "type": "module",
   "types": "./src/index.ts",
   "scripts": {
     "db:generate": "prisma generate",
