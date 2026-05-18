@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { X, Camera, Upload, Loader2 } from 'lucide-react';
+import { X, Camera, Upload, Loader2, UserX, FileX, Clock, AlertTriangle } from 'lucide-react';
 import UploadTab from './UploadTab';
 import CameraTab from './CameraTab';
 import ProcessingView from './ProcessingView';
@@ -13,7 +13,7 @@ interface ModalProps {
 }
 
 const Modal: React.FC<ModalProps> = ({ onClose, productId, tenantId }) => {
-  const { status, reset } = useStore();
+  const { status, reset, error } = useStore();
   const [activeTab, setActiveTab] = useState<'upload' | 'camera'>('upload');
 
   const handleClose = () => {
@@ -62,22 +62,56 @@ const Modal: React.FC<ModalProps> = ({ onClose, productId, tenantId }) => {
       case 'completed':
         return <ResultView onClose={handleClose} />;
       case 'failed':
-      case 'timeout':
+      case 'timeout': {
+        const errLower = (error || '').toLowerCase();
+        let errorTitle = 'Something went wrong';
+        let errorDesc = 'Please try again or use a different photo.';
+        let ErrorIcon = X;
+        let iconBg = 'tryon-bg-red-50';
+        let iconColor = 'tryon-text-red-500';
+
+        if (errLower.includes('face') || errLower.includes('selfie') || errLower.includes('person') || errLower.includes('detect')) {
+          errorTitle = 'No Face Detected';
+          errorDesc = 'We couldn\'t detect a clear face in your photo. Make sure your head is fully visible and looking straight ahead!';
+          ErrorIcon = UserX;
+          iconBg = 'tryon-bg-amber-50';
+          iconColor = 'tryon-text-amber-600';
+        } else if (errLower.includes('format') || errLower.includes('unsupported') || errLower.includes('size') || errLower.includes('type')) {
+          errorTitle = 'Unsupported Photo';
+          errorDesc = 'Please upload a standard portrait photo (JPEG or PNG) under 5MB for the best try-on styling results.';
+          ErrorIcon = FileX;
+          iconBg = 'tryon-bg-cyan-50';
+          iconColor = 'tryon-text-cyan-600';
+        } else if (status === 'timeout' || errLower.includes('timeout') || errLower.includes('timed out')) {
+          errorTitle = 'Processing Timeout';
+          errorDesc = 'Our AI engines are currently taking a little longer than usual. Tap try again to resubmit your look!';
+          ErrorIcon = Clock;
+          iconBg = 'tryon-bg-indigo-50';
+          iconColor = 'tryon-text-indigo-600';
+        } else if (errLower.includes('queue') || errLower.includes('model') || errLower.includes('busy') || errLower.includes('fail')) {
+          errorTitle = 'Engine is Busy';
+          errorDesc = 'All AI styling instances are actively tailoring shopify garments. Let\'s resubmit your look!';
+          ErrorIcon = AlertTriangle;
+          iconBg = 'tryon-bg-rose-50';
+          iconColor = 'tryon-text-rose-600';
+        }
+
         return (
-          <div className="tryon-flex tryon-flex-col tryon-items-center tryon-justify-center tryon-h-full tryon-p-8 tryon-text-center">
-            <div className="tryon-w-12 tryon-h-12 tryon-bg-red-50 tryon-text-red-500 tryon-rounded-full tryon-flex tryon-items-center tryon-justify-center tryon-mb-4">
-              <X className="tryon-w-6 tryon-h-6" />
+          <div className="tryon-flex tryon-flex-col tryon-items-center tryon-justify-center tryon-h-full tryon-p-8 tryon-text-center tryon-fade-in-up">
+            <div className={`tryon-w-16 tryon-h-16 ${iconBg} ${iconColor} tryon-rounded-full tryon-flex tryon-items-center tryon-justify-center tryon-mb-5 tryon-shadow-sm`}>
+              <ErrorIcon className="tryon-w-8 tryon-h-8" />
             </div>
-            <h3 className="tryon-text-lg tryon-font-semibold tryon-mb-2">Something went wrong</h3>
-            <p className="tryon-text-gray-500 tryon-mb-6">Please try again or use a different photo.</p>
+            <h3 className="tryon-text-lg tryon-font-semibold tryon-text-slate-900 tryon-mb-2">{errorTitle}</h3>
+            <p className="tryon-text-sm tryon-text-slate-500 tryon-max-w-xs tryon-mb-6 tryon-leading-relaxed">{errorDesc}</p>
             <button
               onClick={reset}
-              className="tryon-px-6 tryon-py-2 tryon-bg-black tryon-text-white tryon-rounded-full tryon-font-medium"
+              className="tryon-px-8 tryon-py-3 tryon-bg-black tryon-text-white tryon-rounded-full tryon-font-semibold tryon-text-sm tryon-transition-all tryon-active:scale-95 tryon-shadow-lg tryon-shadow-slate-950/20"
             >
               Try Again
             </button>
           </div>
         );
+      }
       default:
         return null;
     }
