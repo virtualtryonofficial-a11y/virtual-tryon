@@ -1,4 +1,5 @@
 import { useStore } from '../store/useStore';
+import { resizeImageBeforeUpload } from './image';
 
 const MOCK_STATE: Record<string, number> = {};
 
@@ -14,6 +15,19 @@ export async function startTryOn(tenantId: string, productId: string, userImage:
     return jobId;
   }
 
+  // Optimize base64 image client-side before sending to save network costs and upload time
+  let optimizedImage = userImage;
+  try {
+    if (runtimeConfig.debug) {
+      console.log('TryOnWidget: Optimizing user upload via canvas resizing...');
+    }
+    optimizedImage = await resizeImageBeforeUpload(userImage);
+  } catch (err: any) {
+    if (runtimeConfig.debug) {
+      console.warn('TryOnWidget: Resizing failed, falling back to original payload size:', err.message);
+    }
+  }
+
   if (runtimeConfig.debug) {
     console.log('TryOnWidget: Starting try-on at', `${runtimeConfig.apiUrl}/v1/tryon`);
   }
@@ -21,7 +35,7 @@ export async function startTryOn(tenantId: string, productId: string, userImage:
   const response = await fetch(`${runtimeConfig.apiUrl}/v1/tryon`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tenantId, productId, userImage }),
+    body: JSON.stringify({ tenantId, productId, userImage: optimizedImage }),
   });
 
   if (!response.ok) {

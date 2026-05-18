@@ -77,8 +77,21 @@ export class TryonService {
     // 2. Compress image
     const compressed = await compressForTryOn(buffer);
 
-    // 3. Resolve product
-    const product = await getProductByTenantAndShopifyId(dto.tenantId, dto.productId);
+    // 3. Resolve product (with secure Redis cache to minimize Neon database reads)
+    const productCacheKey = `product:${dto.tenantId}:${dto.productId}`;
+    let product: any = null;
+    
+    const cachedProduct = await this.redis.get(productCacheKey);
+    if (cachedProduct) {
+      product = JSON.parse(cachedProduct);
+    } else {
+      product = await getProductByTenantAndShopifyId(dto.tenantId, dto.productId);
+      if (product) {
+        // Cache static product metadata for 10 minutes (600 seconds)
+        await this.redis.set(productCacheKey, JSON.stringify(product), 'EX', 600);
+      }
+    }
+
     if (!product) {
       throw new NotFoundException(`Product ${dto.productId} not found for tenant ${dto.tenantId}`);
     }
@@ -116,25 +129,40 @@ export class TryonService {
   }
 
   async getStatus(jobId: string, tenantId: string): Promise<TryonStatusResponse> {
-    // 1. Check Redis cache first
-    const cacheKey = `tryon:${jobId}:status`;
-    const cachedStatus = await this.redis.get(cacheKey);
+    // 1. Check full response cache first (fully eliminates database reads during widget polling)
+    const responseCacheKey = `tryon:${jobId}:response`;
+    const cachedResponse = await this.redis.get(responseCacheKey);
+    if (cachedResponse) {
+      return JSON.parse(cachedResponse);
+    }
+
+    // 2. Fallback: Check status cache (for backward compatibility / cold start)
+    const statusCacheKey = `tryon:${jobId}:status`;
+    const cachedStatus = await this.redis.get(statusCacheKey);
 
     if (cachedStatus === 'completed' || cachedStatus === 'failed') {
       const record = await getTryonRequest(jobId);
       if (!record || record.tenantId !== tenantId) {
         throw new NotFoundException(`Job ${jobId} not found`);
       }
-      return this.mapToResponse(record);
+      const response = await this.mapToResponse(record);
+      // Cache completed response in Redis for 3 minutes (180 seconds)
+      await this.redis.set(responseCacheKey, JSON.stringify(response), 'EX', 180);
+      return response;
     }
 
-    // 2. Fallback to DB
+    // 3. Fallback: Query database
     const record = await getTryonRequest(jobId);
     if (!record || record.tenantId !== tenantId) {
       throw new NotFoundException(`Job ${jobId} not found`);
     }
 
-    return this.mapToResponse(record);
+    const response = await this.mapToResponse(record);
+    if (response.status === 'completed' || response.status === 'failed') {
+      // Cache completed response in Redis for 3 minutes (180 seconds)
+      await this.redis.set(responseCacheKey, JSON.stringify(response), 'EX', 180);
+    }
+    return response;
   }
 
   private async mapToResponse(record: any): Promise<TryonStatusResponse> {

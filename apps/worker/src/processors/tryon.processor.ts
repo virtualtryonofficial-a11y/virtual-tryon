@@ -115,6 +115,20 @@ export async function processTryOn(job: Job<TryonJobPayload>) {
       complimentCached,
     });
 
+    // Generate the signed read URL for the generated try-on image
+    const signedGeneratedUrl = await getSignedReadUrl(generatedKey);
+
+    const fullResponse = {
+      status: 'completed',
+      imageUrl: signedGeneratedUrl,
+      compliment: complimentResult!.compliment,
+      styleScore: complimentResult!.score,
+      complimentCached,
+    };
+
+    // Cache the full response payload in Redis for 3 minutes (180s) to completely avoid DB reads on polling
+    await redis.set(`tryon:${requestId}:response`, JSON.stringify(fullResponse), 'EX', 180);
+
     // STEP 8: Cache status in Redis for 180s
     await redis.set(`tryon:${requestId}:status`, 'completed', 'EX', 180);
 
