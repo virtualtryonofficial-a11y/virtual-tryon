@@ -51,14 +51,19 @@
 
   <script type="module" src="/src/main.tsx"></script>
   <script>
-    window.addEventListener('load', () => {
+    // Resiliently poll for TryOnWidget injection to bypass Vite's asynchronous compilation loading drift
+    const initInterval = setInterval(() => {
       if (window.TryOnWidget) {
+        clearInterval(initInterval);
+        console.log('TryOnWidget: Resolving developer mock preview configuration...');
         window.TryOnWidget.init({
-          tenantId: '393c3474-7c52-4625-9d4b-6e187c11142a',
-          productId: '7e0fad65-e031-4f7d-90de-025fbed7c609'
+          tenantId: 'demo-boutique',
+          productId: 'shopify-prod-100',
+          useMock: true,
+          debug: true
         });
       }
-    });
+    }, 100);
   </script>
 </body>
 </html>
