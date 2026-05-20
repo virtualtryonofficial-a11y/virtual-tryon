@@ -7,6 +7,7 @@ async function testProductMetadataCaching() {
   console.log('⚡ Running Product Metadata Cache Tests...');
 
   const { Redis } = await import('ioredis');
+  // @ts-ignore - TS module resolution quirks with dynamic imports in NodeNext
   const { config } = await import('@trail/config');
   // @ts-ignore - TS module resolution quirks with dynamic imports in NodeNext
   const { getProductByTenantAndShopifyId, prisma } = await import('@trail/db');
@@ -80,6 +81,7 @@ async function testFullStatusResponseCaching() {
   console.log('⚡ Running Full Status Response Cache Tests...');
 
   const { Redis } = await import('ioredis');
+  // @ts-ignore - TS module resolution quirks with dynamic imports in NodeNext
   const { config } = await import('@trail/config');
 
   const redis = new Redis(config.redis.url);
