@@ -44,9 +44,9 @@ export const config = {
     publicUrl: requireEnv('WIDGET_PUBLIC_URL'),
   },
   shopify: {
-    apiKey: requireEnv('SHOPIFY_API_KEY'),
-    apiSecret: requireEnv('SHOPIFY_API_SECRET'),
-    appUrl: requireEnv('SHOPIFY_APP_URL'),
+    apiKey: process.env['SHOPIFY_API_KEY'] || 'mock_client_id_placeholder',
+    apiSecret: process.env['SHOPIFY_API_SECRET'] || 'mock_client_secret_placeholder',
+    appUrl: process.env['SHOPIFY_APP_URL'] || 'http://localhost:3000',
     scopes: process.env['SHOPIFY_SCOPES'] || 'read_products,write_script_tags',
   },
   jwt: {
