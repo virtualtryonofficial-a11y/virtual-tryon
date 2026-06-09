@@ -1,7 +1,8 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { Redis } from 'ioredis';
-import { prisma } from '@trail/db';
+import { prisma, createAuditLog } from '@trail/db';
 import { config as appConfig } from '@trail/config';
+import { purgeTenantData } from '@trail/tenant';
 import { ShopifyService } from './shopify.service';
 
 @Injectable()
@@ -21,6 +22,17 @@ export class ShopifyWebhooks {
    */
   async handleWebhook(topic: string, shop: string, payload: any): Promise<void> {
     try {
+      // Log every inbound webhook for auditability
+      const tenant = await prisma.tenant.findUnique({ where: { shopifyDomain: shop } });
+      if (tenant) {
+        await createAuditLog({
+          tenantId: tenant.id,
+          action: 'shopify_webhook_received',
+          actor: 'shopify',
+          metadata: { topic, shop },
+        }).catch(() => {});
+      }
+
       switch (topic.toLowerCase()) {
         case 'app/uninstalled':
           await this.handleAppUninstalled(shop);
@@ -33,6 +45,18 @@ export class ShopifyWebhooks {
 
         case 'products/delete':
           await this.handleProductDelete(shop, payload);
+          break;
+
+        case 'shop/redact':
+          await this.handleShopRedact(shop, payload);
+          break;
+
+        case 'customers/redact':
+          await this.handleCustomerRedact(shop, payload);
+          break;
+
+        case 'customers/data_request':
+          await this.handleCustomerDataRequest(shop, payload);
           break;
 
         default:
@@ -50,7 +74,6 @@ export class ShopifyWebhooks {
   private async handleAppUninstalled(shop: string): Promise<void> {
     this.logger.log(`Uninstalling app for shop: ${shop}`);
 
-    // Resolve tenant
     const tenant = await prisma.tenant.findUnique({
       where: { shopifyDomain: shop },
     });
@@ -60,25 +83,27 @@ export class ShopifyWebhooks {
       return;
     }
 
-    // 1. Deactivate tenant by clearing active features
     await prisma.tenant.update({
       where: { id: tenant.id },
-      data: {
-        features: [],
-      },
+      data: { features: [] },
     });
 
-    // 2. Remove access token cache from Redis
     const redisKey = `shopify:${shop}:token`;
     await this.redis.del(redisKey);
 
-    // 3. Remove ScriptTags from Shopify storefront if token was active (best-effort)
     const token = await this.shopifyService.getAccessToken(shop);
     if (token) {
       await this.shopifyService.removeScriptTag(shop, token).catch((err) => {
         this.logger.error(`Best effort ScriptTag removal failed on uninstall: ${err.message}`);
       });
     }
+
+    await createAuditLog({
+      tenantId: tenant.id,
+      action: 'shopify_uninstalled',
+      actor: 'shopify',
+      metadata: { shop },
+    }).catch(() => {});
 
     this.logger.log(`App successfully uninstalled and tenant ${tenant.id} deactivated.`);
   }
@@ -134,5 +159,48 @@ export class ShopifyWebhooks {
       // If product doesn't exist, we ignore to maintain idempotency
       this.logger.debug(`Product delete webhook ignored (already deleted or non-existent): ${err.message}`);
     }
+  }
+
+  /**
+   * Handles shop/redact GDPR webhook.
+   * Completely purges the merchant's data (images, database cascade records, and caches).
+   */
+  private async handleShopRedact(shop: string, payload: any): Promise<void> {
+    this.logger.log(`Received GDPR shop/redact request for shop: ${shop}`);
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { shopifyDomain: shop },
+    });
+
+    if (!tenant) {
+      this.logger.warn(`Tenant not found for shop: ${shop} during shop/redact`);
+      return;
+    }
+
+    try {
+      // Trigger complete purge of DB, R2 files, and cache
+      await purgeTenantData(tenant.id, shop);
+
+      this.logger.log(`GDPR shop/redact successfully completed for tenant: ${tenant.id} (${shop})`);
+    } catch (err: any) {
+      this.logger.error(`Failed to execute shop/redact for shop ${shop}: ${err.message}`);
+      throw err;
+    }
+  }
+
+  /**
+   * Handles customers/redact GDPR webhook.
+   * Since this SaaS does not collect or store end-customer personal data (PII), we log and return immediately.
+   */
+  private async handleCustomerRedact(shop: string, payload: any): Promise<void> {
+    this.logger.log(`Received GDPR customers/redact request for shop: ${shop}. No customer PII is stored in this system. Resolving request.`);
+  }
+
+  /**
+   * Handles customers/data_request GDPR webhook.
+   * Since this SaaS does not collect or store end-customer personal data (PII), we return an empty payload.
+   */
+  private async handleCustomerDataRequest(shop: string, payload: any): Promise<void> {
+    this.logger.log(`Received GDPR customers/data_request request for shop: ${shop}. No customer PII is stored in this system.`);
   }
 }

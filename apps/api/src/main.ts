@@ -15,52 +15,101 @@ import { AppModule } from './app.module';
 import { RequestSanitizationPipe } from './common/pipes/sanitize.pipe';
 import { SentryExceptionFilter } from './common/filters/sentry.filter';
 
+// ── CORS allowlist ────────────────────────────────────────────────────────────
+// Uses EXACT Set membership — no substring matching to prevent
+// "evil-onrender.com.attacker.com" style bypasses.
+const ALLOWED_ORIGINS = new Set([
+  'https://virtual-trail.pages.dev',
+  'https://app.virtual-trail.com',
+  'https://admin.virtual-trail.com',
+  // Development origins — kept here so they can be reviewed explicitly
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173',
+]);
+
+/**
+ * Returns true for any *.myshopify.com merchant storefront.
+ * Uses strict suffix matching — not substring — to prevent spoofing.
+ */
+function isShopifyOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    return (
+      url.protocol === 'https:' &&
+      (url.hostname === 'myshopify.com' || url.hostname.endsWith('.myshopify.com'))
+    );
+  } catch {
+    return false;
+  }
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
-  
+
   app.useLogger(app.get(Logger));
-  app.use(helmet({
-    contentSecurityPolicy: false,
-  }));
-  
-  // Hardened Dynamic CORS Policy for production safety
+
+  // ── Security headers ────────────────────────────────────────────────────────
+  app.use(
+    helmet({
+      // CSP is intentionally omitted for the API server (JSON-only responses).
+      // The admin dashboard HTML sets its own restrictive CSP inline.
+      contentSecurityPolicy: false,
+      // All other Helmet defaults apply: X-Frame-Options, X-Content-Type-Options,
+      // HSTS (max-age=15552000), Referrer-Policy: no-referrer, etc.
+    }),
+  );
+
+  // ── CORS — exact-match allowlist ────────────────────────────────────────────
   app.enableCors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, or server-to-server)
+      // No-origin requests (server-to-server, curl, mobile): allow
       if (!origin) {
         callback(null, true);
         return;
       }
-      
-      const allowedOrigins = [
-        'localhost',
-        '127.0.0.1',
-        'onrender.com',
-        'virtual-trail',
-        'shopify.com',
-      ];
-      
-      const isAllowed = allowedOrigins.some((domain) => origin.includes(domain)) || origin.endsWith('.myshopify.com');
-      
-      if (isAllowed) {
+
+      if (ALLOWED_ORIGINS.has(origin) || isShopifyOrigin(origin)) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS production guidelines'));
+        callback(new Error(`Origin "${origin}" is not permitted by CORS policy`));
       }
     },
     credentials: true,
   });
-  
+
   app.useGlobalPipes(
     new RequestSanitizationPipe(),
-    new ValidationPipe({ whitelist: true, transform: true })
+    new ValidationPipe({ whitelist: true, transform: true }),
   );
 
   const { httpAdapter } = app.get(HttpAdapterHost);
   app.useGlobalFilters(new SentryExceptionFilter(httpAdapter));
 
-  // Mount Secure Bull Board Dashboard
+  // ── Admin area — Basic Auth on ALL /admin/* routes ────────────────────────
+  // Applying one middleware to the /admin prefix covers:
+  //   • /admin/dashboard   — visual analytics dashboard
+  //   • /admin/queues/*    — Bull Board queue monitor
+  //   • /admin/tenants     — tenant management API (also protected by AdminGuard)
+  //   • /admin/analytics   — dashboard data API
+  //   • /admin/costs       — cost analytics API
   const server = app.getHttpAdapter().getInstance();
+
+  const authMiddleware = basicAuth({
+    authorizer: (username: string, password: string): boolean => {
+      const validUsername = basicAuth.safeCompare(username, 'admin');
+      const validPassword = basicAuth.safeCompare(password, appConfig.admin.apiKey);
+      return validUsername && validPassword;
+    },
+    authorizeAsync: false,
+    challenge: true,
+    realm: 'Virtual-Trail Admin',
+  });
+
+  // Mount Bull Board BEFORE the auth middleware so the serverAdapter
+  // registers its routes first; auth is enforced at the /admin level.
   const serverAdapter = new ExpressAdapter();
   serverAdapter.setBasePath('/admin/queues');
 
@@ -75,18 +124,16 @@ async function bootstrap() {
       new BullMQAdapter(cleanupQueue) as any,
       new BullMQAdapter(dlqQueue) as any,
     ],
-    serverAdapter: serverAdapter,
+    serverAdapter,
   });
 
-  // Secure both Bull Board and Visual Dashboard with browser Basic Auth
-  const authMiddleware = basicAuth({
-    users: { admin: appConfig.admin.apiKey },
-    challenge: true,
-  });
-
-  server.use('/admin/queues', authMiddleware, serverAdapter.getRouter());
-  server.use('/admin/dashboard', authMiddleware);
+  // Single auth middleware guards the entire /admin namespace
+  server.use('/admin', authMiddleware);
+  // Bull Board router registered after auth; Express evaluates middleware
+  // in registration order so auth always runs first.
+  server.use('/admin/queues', serverAdapter.getRouter());
 
   await app.listen(process.env.PORT || 3000);
 }
+
 bootstrap();

@@ -24,6 +24,7 @@ interface WidgetState {
     apiUrl: string;
     useMock: boolean;
     debug: boolean;
+    tenantApiKey: string;
   };
 
   // Actions
@@ -53,6 +54,7 @@ export const useStore = create<WidgetState>((set) => ({
     apiUrl: '',
     useMock: false,
     debug: false,
+    tenantApiKey: '',
   },
 
   setStatus: (status) => set({ status }),

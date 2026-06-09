@@ -106,6 +106,9 @@ export class ShopifyController {
     // 5. Inject ScriptTag automatically to load widget.js
     await this.shopifyService.injectScriptTag(shop, token);
 
+    // 5.5 Inject Metafield
+    await this.shopifyService.createTenantMetafield(shop, token, tenant.id);
+
     // 6. Register Webhooks for app uninstalled and product updates
     await this.shopifyService.registerWebhooks(shop, token);
 

@@ -129,3 +129,15 @@ export async function getTryonRequestsForCleanup(userImageOlderThanMs: number, g
     },
   });
 }
+
+export async function getTryonRequestsForTenant(tenantId: string) {
+  return prisma.tryonRequest.findMany({
+    where: { tenantId },
+  });
+}
+
+export async function purgeTenantFromDb(id: string) {
+  return prisma.tenant.delete({
+    where: { id },
+  });
+}

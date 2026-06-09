@@ -9,6 +9,7 @@
   "dependencies": {
     "@google/generative-ai": "^0.2.1",
     "@trail/config": "workspace:*",
+    "@trail/security": "workspace:*",
     "axios": "^1.6.7",
     "@sentry/node": "^8.0.0",
     "sharp": "^0.33.2",

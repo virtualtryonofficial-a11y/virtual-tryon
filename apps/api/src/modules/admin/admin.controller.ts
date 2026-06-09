@@ -8,8 +8,9 @@ import {
   Param,
   UseGuards,
   Header,
+  Req,
 } from '@nestjs/common';
-import { config } from '@trail/config';
+import type { Request } from 'express';
 import { AdminGuard } from '../../guards/admin.guard';
 import { AdminService } from './admin.service';
 
@@ -25,14 +26,14 @@ export class AdminController {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://*.shopify.com https://*.shopifycdn.com https://images.unsplash.com https://pub-*.r2.dev; connect-src 'self'; frame-ancestors 'none';">
   <title>Virtual-Trail | SaaS Cost & Analytics Panel</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js" integrity="sha256-RmMn55H42P/vD475s3NsnM1Hn26wU8jO1J5hX5g5g0k=" crossorigin="anonymous"></script>
+  <script src="https://cdn.tailwindcss.com/3.4.1" crossorigin="anonymous"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -213,14 +214,15 @@ export class AdminController {
   </main>
 
   <script>
-    const ADMIN_API_KEY = '${config.admin.apiKey}';
-    const headers = { 'X-Admin-Api-Key': ADMIN_API_KEY };
-
+    // No secrets in this page. The browser automatically includes HTTP Basic Auth
+    // credentials (cached from the initial dashboard auth challenge) for all
+    // same-origin /admin/* requests. The AdminGuard on the API side accepts
+    // both X-Admin-Api-Key header and Authorization: Basic header.
     async function loadDashboard() {
       try {
         const [analyticsRes, costsRes] = await Promise.all([
-          fetch('/admin/analytics', { headers }).then(r => r.json()),
-          fetch('/admin/costs', { headers }).then(r => r.json())
+          fetch('/admin/analytics').then(r => r.json()),
+          fetch('/admin/costs').then(r => r.json())
         ]);
 
         // 1. Load Stats
@@ -327,6 +329,7 @@ export class AdminController {
   @Post('tenants')
   @UseGuards(AdminGuard)
   async createTenant(
+    @Req() req: Request,
     @Body()
     body: {
       name: string;
@@ -340,7 +343,7 @@ export class AdminController {
       widgetTheme?: string;
     }
   ) {
-    return this.adminService.createTenant(body);
+    return this.adminService.createTenant(body, 'admin', req.ip);
   }
 
   @Get('requests')
@@ -378,20 +381,20 @@ export class AdminController {
 
   @Patch('tenants/:id')
   @UseGuards(AdminGuard)
-  async updateTenant(@Param('id') id: string, @Body() body: any) {
-    return this.adminService.updateTenant(id, body);
+  async updateTenant(@Req() req: Request, @Param('id') id: string, @Body() body: any) {
+    return this.adminService.updateTenant(id, body, 'admin', req.ip);
   }
 
   @Post('tenants/:id/config')
   @UseGuards(AdminGuard)
-  async upsertTenantConfig(@Param('id') id: string, @Body() body: any) {
-    return this.adminService.upsertTenantConfig(id, body);
+  async upsertTenantConfig(@Req() req: Request, @Param('id') id: string, @Body() body: any) {
+    return this.adminService.upsertTenantConfig(id, body, 'admin', req.ip);
   }
 
   @Patch('tenants/:id/config')
   @UseGuards(AdminGuard)
-  async updateTenantConfig(@Param('id') id: string, @Body() body: any) {
-    return this.adminService.updateTenantConfig(id, body);
+  async updateTenantConfig(@Req() req: Request, @Param('id') id: string, @Body() body: any) {
+    return this.adminService.updateTenantConfig(id, body, 'admin', req.ip);
   }
 
   @Get('tenants/:id/analytics')

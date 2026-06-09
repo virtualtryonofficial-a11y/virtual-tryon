@@ -19,7 +19,8 @@
       "@trail/queue": ["libs/queue/src/index"],
       "@trail/ai": ["libs/ai/src/index"],
       "@trail/storage": ["libs/storage/src/index"],
-      "@trail/tenant": ["libs/tenant/src/index"]
+      "@trail/tenant": ["libs/tenant/src/index"],
+      "@trail/security": ["libs/security/src/index"]
     }
   },
   "exclude": ["node_modules", "dist"]

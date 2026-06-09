@@ -10,10 +10,11 @@ datasource db {
 model Tenant {
   id            String         @id @default(uuid())
   name          String
-  shopifyDomain String         @unique
-  apiKey        String         @unique @default(uuid())
-  features      String[]       // ["tryon", "size_intelligence"]
-  createdAt     DateTime       @default(now())
+  shopifyDomain       String         @unique
+  apiKey              String         @unique @default(uuid())
+  encryptedShopifyToken String?
+  features            String[]       // ["tryon", "size_intelligence"]
+  createdAt           DateTime       @default(now())
 
   config        TenantConfig?
   products      Product[]
@@ -23,7 +24,7 @@ model Tenant {
 model TenantConfig {
   id             String   @id @default(uuid())
   tenantId       String   @unique
-  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   primaryColor   String   @default("#000000")
   complimentTone String   @default("friendly")  // friendly | luxury | playful
   logoUrl        String?
@@ -36,7 +37,7 @@ model TenantConfig {
 model Product {
   id                    String         @id @default(uuid())
   tenantId              String
-  tenant                Tenant         @relation(fields: [tenantId], references: [id])
+  tenant                Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   shopifyProductId      String
   imageUrl              String
   category              String?
@@ -52,9 +53,9 @@ model Product {
 model TryonRequest {
   id                String    @id @default(uuid())
   tenantId          String
-  tenant            Tenant    @relation(fields: [tenantId], references: [id])
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   productId         String
-  product           Product   @relation(fields: [productId], references: [id])
+  product           Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   status            String    @default("queued")  // queued | processing | completed | failed
   userImageKey      String?   // R2 key — deleted after 24h by cleanup processor
   generatedImageKey String?   // R2 key — deleted after 7 days by cleanup processor
@@ -71,6 +72,8 @@ model AuditLog {
   id        String   @id @default(uuid())
   tenantId  String
   action    String
+  actor     String?  // 'admin' | 'system' | tenantId
+  ipAddress String?
   metadata  Json
   createdAt DateTime @default(now())
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { Camera, Upload, X } from 'lucide-react';
 import UploadTab from './UploadTab';
@@ -83,7 +83,7 @@ const Modal: React.FC<ModalProps> = ({ onClose, productId, tenantId }) => {
   };
 
   // ── Motion variants ────────────────────────────────────────────
-  const cardVariants = mobile
+  const cardVariants: Variants = mobile
     ? {
         hidden:  { y: '100%', opacity: 0 },
         visible: { y: 0, opacity: 1, transition: { type: 'spring', stiffness: 280, damping: 28 } },

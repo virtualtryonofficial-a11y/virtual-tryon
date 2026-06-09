@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { prisma } from '@trail/db';
+import { prisma, createAuditLog } from '@trail/db';
+
 
 @Injectable()
 export class AdminService {
@@ -10,18 +11,22 @@ export class AdminService {
     });
   }
 
-  async createTenant(dto: {
-    name: string;
-    shopifyDomain: string;
-    features?: string[];
-    primaryColor?: string;
-    complimentTone?: string;
-    segmindModel?: string;
-    logoUrl?: string;
-    buttonStyle?: string;
-    widgetTheme?: string;
-  }) {
-    return prisma.tenant.create({
+  async createTenant(
+    dto: {
+      name: string;
+      shopifyDomain: string;
+      features?: string[];
+      primaryColor?: string;
+      complimentTone?: string;
+      segmindModel?: string;
+      logoUrl?: string;
+      buttonStyle?: string;
+      widgetTheme?: string;
+    },
+    actor = 'admin',
+    ipAddress?: string,
+  ) {
+    const tenant = await prisma.tenant.create({
       data: {
         name: dto.name,
         shopifyDomain: dto.shopifyDomain,
@@ -39,6 +44,16 @@ export class AdminService {
       },
       include: { config: true },
     });
+
+    await createAuditLog({
+      tenantId: tenant.id,
+      action: 'tenant_created',
+      actor,
+      ipAddress,
+      metadata: { name: tenant.name, shopifyDomain: tenant.shopifyDomain, features: tenant.features },
+    }).catch(() => { /* audit failure must not block operation */ });
+
+    return tenant;
   }
 
   async getRequests(filters: { tenantId?: string; status?: string }) {
@@ -205,12 +220,27 @@ export class AdminService {
     });
   }
 
-  async updateTenant(id: string, data: { name?: string; shopifyDomain?: string; features?: string[] }) {
-    return prisma.tenant.update({
+  async updateTenant(
+    id: string,
+    data: { name?: string; shopifyDomain?: string; features?: string[] },
+    actor = 'admin',
+    ipAddress?: string,
+  ) {
+    const tenant = await prisma.tenant.update({
       where: { id },
       data,
       include: { config: true },
     });
+
+    await createAuditLog({
+      tenantId: id,
+      action: 'tenant_updated',
+      actor,
+      ipAddress,
+      metadata: { updatedFields: Object.keys(data), changes: data },
+    }).catch(() => {});
+
+    return tenant;
   }
 
   async setPreferredGarmentImage(productId: string, imageUrl: string) {
@@ -226,19 +256,39 @@ export class AdminService {
     };
   }
 
-  async upsertTenantConfig(tenantId: string, data: any) {
-    return prisma.tenantConfig.upsert({
+  async upsertTenantConfig(tenantId: string, data: any, actor = 'admin', ipAddress?: string) {
+    const result = await prisma.tenantConfig.upsert({
       where: { tenantId },
       update: data,
       create: { tenantId, ...data },
     });
+
+    await createAuditLog({
+      tenantId,
+      action: 'tenant_config_upserted',
+      actor,
+      ipAddress,
+      metadata: { updatedFields: Object.keys(data) },
+    }).catch(() => {});
+
+    return result;
   }
 
-  async updateTenantConfig(tenantId: string, data: any) {
-    return prisma.tenantConfig.update({
+  async updateTenantConfig(tenantId: string, data: any, actor = 'admin', ipAddress?: string) {
+    const result = await prisma.tenantConfig.update({
       where: { tenantId },
       data,
     });
+
+    await createAuditLog({
+      tenantId,
+      action: 'tenant_config_updated',
+      actor,
+      ipAddress,
+      metadata: { updatedFields: Object.keys(data) },
+    }).catch(() => {});
+
+    return result;
   }
 
   async getTenantAnalytics(tenantId: string) {

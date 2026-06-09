@@ -3,6 +3,7 @@ import { z } from 'zod';
 import * as Sentry from '@sentry/node';
 import pino from 'pino';
 import { config } from '@trail/config';
+import { validateExternalImageUrl, SsrfBlockedError } from '@trail/security';
 import {
   VirtualTryOnProvider,
   TryOnInput,
@@ -73,6 +74,22 @@ export class SegmindProvider implements VirtualTryOnProvider {
     const url = `https://api.segmind.com/v1/${modelName}`;
 
     try {
+      // SSRF validation — block private IPs and non-allowlisted domains before
+      // passing URLs to the Segmind API payload.
+      try {
+        validateExternalImageUrl(input.modelImage);
+        validateExternalImageUrl(input.garmentImage);
+      } catch (ssrfErr) {
+        const err = ssrfErr as SsrfBlockedError;
+        throw new InvalidProviderResponseError(
+          `SSRF protection blocked image URL: ${err.message}`,
+          providerName,
+          input.tenantId,
+          input.productId,
+          Date.now() - start,
+        );
+      }
+
       const response = await axios.post(
         url,
         {

@@ -2,8 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Redis } from 'ioredis';
 import axios from 'axios';
 import { config as appConfig } from '@trail/config';
-import { prisma } from '@trail/db';
+import { prisma, createAuditLog } from '@trail/db';
 import { selectBestGarmentImage, ProductImage } from '@trail/ai';
+import { encryptToken, decryptToken } from '@trail/security';
 
 @Injectable()
 export class ShopifyService {
@@ -28,11 +29,15 @@ export class ShopifyService {
   /**
    * Auto-onboard tenant and tenant config in Neon database.
    */
-  async onboardTenant(shop: string) {
+  async onboardTenant(shop: string, ipAddress?: string) {
     // Sanitize shop domain to create a tenant ID (e.g. store-name)
     const tenantId = shop.replace('.myshopify.com', '').toLowerCase();
 
     this.logger.log(`Onboarding tenant: ${tenantId} for shop: ${shop}`);
+
+    // Determine if this is a new install or a reinstall
+    const existing = await prisma.tenant.findUnique({ where: { shopifyDomain: shop } });
+    const isReinstall = existing !== null;
 
     const tenant = await prisma.tenant.upsert({
       where: { shopifyDomain: shop },
@@ -57,6 +62,14 @@ export class ShopifyService {
         widgetTheme: 'light',
       },
     });
+
+    await createAuditLog({
+      tenantId: tenant.id,
+      action: isReinstall ? 'shopify_reinstalled' : 'shopify_installed',
+      actor: 'shopify_oauth',
+      ipAddress,
+      metadata: { shop, isReinstall },
+    }).catch(() => {});
 
     return tenant;
   }
@@ -90,7 +103,7 @@ export class ShopifyService {
   }
 
   /**
-   * Persists the access token to Redis with 24h expiry.
+   * Persists the access token to Redis with 24h expiry (for OAuth online sessions).
    */
   async saveAccessToken(shop: string, token: string): Promise<void> {
     const redisKey = `shopify:${shop}:token`;
@@ -98,11 +111,41 @@ export class ShopifyService {
   }
 
   /**
-   * Gets the active access token for a store from Redis.
+   * Encrypts and permanently saves an offline access token in the database.
+   */
+  async saveOfflineToken(shop: string, token: string): Promise<void> {
+    const encryptedToken = encryptToken(token);
+    await prisma.tenant.update({
+      where: { shopifyDomain: shop },
+      data: { encryptedShopifyToken: encryptedToken },
+    });
+    
+    // Also save it to Redis cache for immediate use
+    const redisKey = `shopify:${shop}:token`;
+    await this.redis.set(redisKey, token, 'EX', 86400);
+  }
+
+  /**
+   * Gets the active access token for a store from Redis or DB fallback.
    */
   async getAccessToken(shop: string): Promise<string | null> {
     const redisKey = `shopify:${shop}:token`;
-    const token = await this.redis.get(redisKey);
+    let token = await this.redis.get(redisKey);
+    
+    if (!token) {
+      // Fallback to database for offline tokens
+      const tenant = await prisma.tenant.findUnique({
+        where: { shopifyDomain: shop },
+        select: { encryptedShopifyToken: true }
+      });
+      
+      if (tenant && tenant.encryptedShopifyToken) {
+        token = decryptToken(tenant.encryptedShopifyToken);
+        // Refresh cache
+        await this.redis.set(redisKey, token, 'EX', 86400);
+      }
+    }
+    
     if (!token && this.isMockMode()) {
       return 'shpat_mock_access_token_12345';
     }
@@ -178,6 +221,45 @@ export class ShopifyService {
   }
 
   /**
+   * Creates or ensures the tryon tenant_id metafield exists.
+   */
+  async createTenantMetafield(shop: string, token: string, tenantId: string): Promise<void> {
+    if (this.isMockMode()) {
+      this.logger.log(`[MOCK] Creating metafield tryon.tenant_id = ${tenantId} for ${shop}`);
+      return;
+    }
+
+    const headers = { 'X-Shopify-Access-Token': token, 'Content-Type': 'application/json' };
+    const getUrl = `https://${shop}/admin/api/2024-01/metafields.json?namespace=tryon&key=tenant_id`;
+
+    try {
+      // Idempotency check: see if it already exists
+      const existingRes = await axios.get(getUrl, { headers, timeout: 10000 });
+      const metafields = existingRes.data.metafields || [];
+
+      if (metafields.length > 0) {
+        this.logger.log(`Tenant metafield already exists on ${shop}`);
+        return;
+      }
+
+      const postUrl = `https://${shop}/admin/api/2024-01/metafields.json`;
+      const payload = {
+        metafield: {
+          namespace: 'tryon',
+          key: 'tenant_id',
+          value: tenantId,
+          type: 'single_line_text_field',
+        },
+      };
+
+      await axios.post(postUrl, payload, { headers, timeout: 10000 });
+      this.logger.log(`Successfully created tenant_id metafield for ${shop}`);
+    } catch (err: any) {
+      this.logger.error(`Metafield creation failed for ${shop}: ${err.message}`);
+    }
+  }
+
+  /**
    * Registers webhook endpoints for essential event topics.
    */
   async registerWebhooks(shop: string, token: string): Promise<void> {
@@ -232,27 +314,55 @@ export class ShopifyService {
    */
   async syncProducts(tenantId: string, shop: string, token: string): Promise<void> {
     this.logger.log(`Starting product sync for tenant: ${tenantId}`);
-
-    let products: any[] = [];
+    const startTime = Date.now();
 
     if (this.isMockMode()) {
-      products = this.generateMockProducts();
-    } else {
-      const url = `https://${shop}/admin/api/2024-01/products.json?limit=50`;
-      const headers = { 'X-Shopify-Access-Token': token };
-      try {
-        const response = await axios.get(url, { headers, timeout: 10000 });
-        products = response.data.products || [];
-      } catch (err: any) {
-        this.logger.error(`Failed to fetch Shopify products for sync: ${err.message}`);
-        throw err;
+      const products = this.generateMockProducts();
+      for (const prod of products) {
+        await this.syncSingleProduct(tenantId, prod);
       }
+      this.logger.log(`Mock product sync completed. Synced ${products.length} products.`);
+      return;
     }
 
-    for (const prod of products) {
-      await this.syncSingleProduct(tenantId, prod);
+    const headers = { 'X-Shopify-Access-Token': token };
+    let url: string | null = `https://${shop}/admin/api/2024-01/products.json?limit=50`;
+    let pagesProcessed = 0;
+    let productsProcessed = 0;
+
+    try {
+      while (url) {
+        pagesProcessed++;
+        const response: any = await axios.get(url, { headers, timeout: 30000 });
+        const products: any[] = response.data.products || [];
+        this.logger.log(`Fetched page ${pagesProcessed} with ${products.length} products`);
+
+        for (const prod of products) {
+          await this.syncSingleProduct(tenantId, prod);
+          productsProcessed++;
+        }
+        this.logger.log(`Finished processing page ${pagesProcessed}`);
+
+        url = null;
+        const linkHeader: string | undefined = response.headers['link'];
+        if (linkHeader) {
+          const links = linkHeader.split(',');
+          for (const link of links) {
+            if (link.includes('rel="next"')) {
+              const match = link.match(/<([^>]+)>/);
+              if (match) {
+                url = match[1];
+              }
+            }
+          }
+        }
+      }
+      const durationSecs = ((Date.now() - startTime) / 1000).toFixed(1);
+      this.logger.log(`Imported ${productsProcessed} products\nPages: ${pagesProcessed}\nDuration: ${durationSecs}s`);
+    } catch (err: any) {
+      this.logger.error(`Failed to fetch Shopify products for sync: ${err.message}`);
+      throw err;
     }
-    this.logger.log(`Product sync completed for tenant: ${tenantId}. Synced ${products.length} products.`);
   }
 
   /**

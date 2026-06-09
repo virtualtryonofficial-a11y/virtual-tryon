@@ -3,6 +3,7 @@ import { z } from 'zod';
 import * as Sentry from '@sentry/node';
 import pino from 'pino';
 import { config } from '@trail/config';
+import { validateExternalImageUrl, SsrfBlockedError } from '@trail/security';
 import {
   VirtualTryOnProvider,
   TryOnInput,
@@ -72,7 +73,22 @@ export class FitRoomProvider implements VirtualTryOnProvider {
     }
 
     try {
-      // 1. Download model and garment images from their source URLs and convert to Blobs
+      // 1. SSRF validation — block private IPs and non-allowlisted domains
+      try {
+        validateExternalImageUrl(input.modelImage);
+        validateExternalImageUrl(input.garmentImage);
+      } catch (ssrfErr) {
+        const err = ssrfErr as SsrfBlockedError;
+        throw new InvalidProviderResponseError(
+          `SSRF protection blocked image URL: ${err.message}`,
+          providerName,
+          input.tenantId,
+          input.productId,
+          Date.now() - start,
+        );
+      }
+
+      // 2. Download model and garment images from their source URLs and convert to Blobs
       logger.debug({ provider: providerName, requestId: input.requestId }, 'Downloading model image from storage URL');
       const modelRes = await axios.get(input.modelImage, { responseType: 'arraybuffer', timeout: 15000 });
       const modelBlob = new Blob([modelRes.data], { type: 'image/jpeg' });

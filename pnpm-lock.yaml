@@ -232,6 +232,9 @@ importers:
       '@trail/config':
         specifier: workspace:*
         version: link:../config
+      '@trail/security':
+        specifier: workspace:*
+        version: link:../security
       axios:
         specifier: ^1.6.7
         version: 1.16.1
@@ -270,6 +273,19 @@ importers:
         specifier: ^5.3.2
         version: 5.10.1
 
+  libs/security:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^10.3.3
+        version: 10.4.22(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.24
+        version: 20.19.41
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
   libs/storage:
     dependencies:
       '@aws-sdk/client-s3':
@@ -290,6 +306,9 @@ importers:
       '@trail/db':
         specifier: workspace:*
         version: link:../db
+      '@trail/storage':
+        specifier: workspace:*
+        version: link:../storage
       ioredis:
         specifier: ^5.3.2
         version: 5.10.1

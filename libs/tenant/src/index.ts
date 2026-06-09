@@ -31,6 +31,7 @@ export async function resolveTenantConfig(tenantId: string) {
   const result = {
     id: tenant.id,
     name: tenant.name,
+    apiKey: tenant.apiKey,   // Required for TenantGuard authentication
     features: tenant.features,
     ...tenant.config,
   };
@@ -47,3 +48,4 @@ export async function clearTenantCache(tenantId: string) {
 }
 
 export * from './webhook.helper';
+export * from './purge';

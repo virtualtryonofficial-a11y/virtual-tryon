@@ -41,7 +41,12 @@ export async function startTryOn(tenantId: string, productId: string, userImage:
   const response = await fetch(`${runtimeConfig.apiUrl}/v1/tryon`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tenantId, productId, userImage: optimizedImage }),
+    body: JSON.stringify({
+      tenantId,
+      productId,
+      tenantApiKey: runtimeConfig.tenantApiKey,
+      userImage: optimizedImage,
+    }),
   });
 
   if (!response.ok) {
@@ -83,7 +88,9 @@ export async function getTryOnStatus(tenantId: string, jobId: string) {
     console.log(`TryOnWidget: Polling ${jobId} at ${runtimeConfig.apiUrl}`);
   }
 
-  const response = await fetch(`${runtimeConfig.apiUrl}/v1/tryon/${jobId}?tenantId=${tenantId}`);
+  const response = await fetch(
+    `${runtimeConfig.apiUrl}/v1/tryon/${jobId}?tenantId=${tenantId}&tenantApiKey=${encodeURIComponent(runtimeConfig.tenantApiKey)}`
+  );
   if (!response.ok) throw new Error('Failed to fetch status');
   return await response.json();
 }
