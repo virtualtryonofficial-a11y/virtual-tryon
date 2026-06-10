@@ -22,9 +22,6 @@ const TryOnButton: React.FC<TryOnButtonProps> = ({ onClick }) => {
       whileHover={{ scale: 1.06, y: -2 }}
       whileTap={{ scale: 0.94 }}
       style={{
-        position: 'fixed',
-        bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))',
-        left: '24px',
         zIndex: 9999,
         display: 'flex',
         alignItems: 'center',
@@ -44,7 +41,7 @@ const TryOnButton: React.FC<TryOnButtonProps> = ({ onClick }) => {
         cursor: 'pointer',
         WebkitFontSmoothing: 'antialiased',
       }}
-      className="vt-anim-pulse"
+      className="vt-anim-pulse virtual-trail-launcher"
     >
       <motion.span
         animate={{ rotate: [0, 15, -10, 0] }}

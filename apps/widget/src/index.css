@@ -212,3 +212,16 @@
   background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0) 100%);
   animation: vt-shimmer 1.6s infinite;
 }
+
+.virtual-trail-launcher {
+  position: fixed;
+  left: 24px;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 768px) {
+  .virtual-trail-launcher {
+    left: 16px;
+    bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  }
+}
