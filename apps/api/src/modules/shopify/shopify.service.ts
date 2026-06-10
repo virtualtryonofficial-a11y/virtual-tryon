@@ -183,7 +183,10 @@ export class ShopifyService {
       for (const tag of scriptTags) {
         if (tag.src === widgetUrl) {
           alreadyInjected = true;
-        } else if (tag.src.startsWith(appConfig.widget.publicUrl)) {
+        } else if (
+          tag.src.startsWith(appConfig.widget.publicUrl) ||
+          tag.src.includes('virtual-trail-widget.onrender.com')
+        ) {
           this.logger.log(`Found outdated/mismatched ScriptTag ${tag.id} (${tag.src}), removing it...`);
           const deleteUrl = `https://${shop}/admin/api/2024-01/script_tags/${tag.id}.json`;
           await axios.delete(deleteUrl, { headers, timeout: 10000 });
