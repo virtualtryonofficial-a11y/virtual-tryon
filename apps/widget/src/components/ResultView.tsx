@@ -222,9 +222,21 @@ const ResultView: React.FC<ResultViewProps> = ({ onClose }) => {
           </motion.button>
         </div>
 
+        {/* Disclaimer */}
+        <p style={{
+          marginTop: 12,
+          textAlign: 'center',
+          fontSize: 10,
+          fontStyle: 'italic',
+          color: 'rgba(245,245,245,0.4)',
+          lineHeight: 1.4,
+        }}>
+          *Note: AI-generated images may contain occasional visual imperfections.
+        </p>
+
         {/* Powered-by footer */}
         <p style={{
-          marginTop: 14,
+          marginTop: 12,
           textAlign: 'center',
           fontSize: 10,
           letterSpacing: '0.12em',

@@ -196,7 +196,7 @@ const UploadTab: React.FC<UploadTabProps> = ({ productId, tenantId }) => {
         <ImageIcon style={{ width: 15, height: 15, color: '#7C3AED', flexShrink: 0, marginTop: 1 }} />
         <p style={{ fontSize: 12, lineHeight: 1.6, color: 'rgba(245,245,245,0.55)' }}>
           <strong style={{ color: 'rgba(245,245,245,0.75)', fontWeight: 600 }}>Stylist Tip:</strong>{' '}
-          Use a well-lit, front-facing photo with a simple background for the best try-on result.
+          For the best try-on result, upload a well-lit, full-size front-facing photo with a simple background. Do not upload close-up selfies or cropped images.
         </p>
       </div>
     </div>
