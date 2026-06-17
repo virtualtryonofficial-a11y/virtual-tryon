@@ -1,0 +1,52 @@
+[
+  {
+    "testId": 1,
+    "name": "isolated",
+    "description": "Isolated garment image on plain background",
+    "success": true,
+    "durationMs": 12724,
+    "outputImageUrl": "https://storage.googleapis.com/enhance-asia-southeast1-prod/tryon/3c3fbad1842041f7a1?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=snapedit-db-1%40mvietnam95.iam.gserviceaccount.com%2F20260521%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260521T162919Z&X-Goog-Expires=172800&X-Goog-SignedHeaders=host&X-Goog-Signature=a7cab7d9fbe1c540e9933f4f8c25a8d87289f4f4b650e0f9749c2380ed1c9a8a70358f47108573f4618673f3b41d5b32f53c0559e9d37deba4182187c4a391fe243d4b4f5344c24b8d1c4f76659d7e725c4ee51999959a19e025837e3636e2616fdd236e2d0154569853a6a7c4a58be05d3b837434e02ddacead8221ecbedf151ac56c097004584374fc49a48e9d39484ab5bbb484a8e2eee946c966846d55f2e2e9b591acacc730b4af1e8b1f9eb7f49301b8cff42a125718850ad54e38bce373680dfab763daef155a02ed6dafbc07edc59e7f5fb8b1c52304489ac44503cac3d68016da8a822f5004235b14ba5be2bd5d1073be8c591db4e5f8d3297b5e4c",
+    "selfieUrl": "https://tryon-assets.c886bcdc3fa2f5f329464cc59f36a72f.r2.cloudflarestorage.com/quality-tests/selfies/test-selfie.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=a88ee3e21695588d9fe96acb838d443b%2F20260521%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260521T162821Z&X-Amz-Expires=7200&X-Amz-Signature=49e1e96c6cf2598ce8837e561f9102614620bdaa47108ff1a7f919dee78424a9&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+    "prodUrl": "https://tryon-assets.c886bcdc3fa2f5f329464cc59f36a72f.r2.cloudflarestorage.com/quality-tests/products/isolated.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=a88ee3e21695588d9fe96acb838d443b%2F20260521%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260521T162924Z&X-Amz-Expires=7200&X-Amz-Signature=7773a39f6fd4b45ef70d5c9c766c96e89a317c1ec576c404b1b515da44c46501&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+  },
+  {
+    "testId": 2,
+    "name": "model-worn",
+    "description": "Model wearing clothing, front-facing",
+    "success": true,
+    "durationMs": 12212,
+    "outputImageUrl": "https://storage.googleapis.com/enhance-asia-southeast1-prod/tryon/e2eb1abd8b7f4841ac?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=snapedit-db-1%40mvietnam95.iam.gserviceaccount.com%2F20260521%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260521T162937Z&X-Goog-Expires=172800&X-Goog-SignedHeaders=host&X-Goog-Signature=617308a2d1e689d8276677933bc19197129c38651895e1c43ad8473c1c404a2b656468f5c5ba0e3144cb7b11a5a411f88532d1219b424a767325bcb4149a97f24730e8f3fe44ddc3e07af47e2aa2518278ea3e418abad8211129444f72bcb29f33ddc972f158b18ebc2db192eba54a41185d600110a02b92237add9d032118a3aa7e05f88d4415856d54205f03a426162011e33c4557268e7f204aa787695b5009391d47f18b8f056d5597a4f26e0398c1d416ab0584e0cc5e15dca2243095a962609adf80efc1043e0f0d26339686a3ac951ddba927f91ae62c6cd4ca1f6817dd73481317d1500d53b11613a60a84ea0e5e19434fbc26e3f67812bee9b3070a",
+    "selfieUrl": "https://tryon-assets.c886bcdc3fa2f5f329464cc59f36a72f.r2.cloudflarestorage.com/quality-tests/selfies/test-selfie.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=a88ee3e21695588d9fe96acb838d443b%2F20260521%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260521T162821Z&X-Amz-Expires=7200&X-Amz-Signature=49e1e96c6cf2598ce8837e561f9102614620bdaa47108ff1a7f919dee78424a9&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+    "prodUrl": "https://tryon-assets.c886bcdc3fa2f5f329464cc59f36a72f.r2.cloudflarestorage.com/quality-tests/products/model-worn.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=a88ee3e21695588d9fe96acb838d443b%2F20260521%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260521T162942Z&X-Amz-Expires=7200&X-Amz-Signature=9b9910060df07db262277f3a81766d70ffe1f4dde98ba89297844ca1c7c66054&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+  },
+  {
+    "testId": 3,
+    "name": "flat-lay",
+    "description": "Garment placed flat on surface",
+    "success": true,
+    "durationMs": 12054,
+    "outputImageUrl": "https://storage.googleapis.com/enhance-asia-southeast1-prod/tryon/2242c4e5e98e4a1aa8?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=snapedit-db-1%40mvietnam95.iam.gserviceaccount.com%2F20260521%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260521T164256Z&X-Goog-Expires=172800&X-Goog-SignedHeaders=host&X-Goog-Signature=a7b7d15af1417f6cbf5b823766eaf24a5e8f4a258e59cb90aa55e21e02f1528c69fad228437e6c945f25b725c5305af1e89995484865e930062922870ab16747f671efa4b00aa617ea2b7935bf3de49b463198eb0969a174a480c7cf03148ed82cc324b49c2538815e40f102d8bc5898f5234c8041a62eaaf238db3e2687613d1c8f97179cf296fc688da283fa6ea539d04bd246f04c92a8c81666989d91fc1b21bdae99a491ec1821d2f64edd1ac6cd589399bb7e4ae1899e0e446519a345d4ba0805b99c1ef4fe1bc87ef3c4866aa20b3898163fa5f0e437868811ec8e394303551f31ac807de13c40bd8f03446250cc77ef3fefa87eb8fed507d91e125d87",
+    "selfieUrl": "https://tryon-assets.c886bcdc3fa2f5f329464cc59f36a72f.r2.cloudflarestorage.com/quality-tests/selfies/test-selfie.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=a88ee3e21695588d9fe96acb838d443b%2F20260521%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260521T164253Z&X-Amz-Expires=7200&X-Amz-Signature=27594c11968aeb81c0e4de9bcc94d490b64df724986f808e673eebe21d02e0f0&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+    "prodUrl": "https://tryon-assets.c886bcdc3fa2f5f329464cc59f36a72f.r2.cloudflarestorage.com/quality-tests/products/flat-lay.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=a88ee3e21695588d9fe96acb838d443b%2F20260521%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260521T164301Z&X-Amz-Expires=7200&X-Amz-Signature=d9765bdafacfff36292292c39396c7e167fcdd4b6ede44732d69dc8fcb54f574&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+  },
+  {
+    "testId": 4,
+    "name": "mannequin",
+    "description": "Mannequin product image",
+    "success": true,
+    "durationMs": 12105,
+    "outputImageUrl": "https://storage.googleapis.com/enhance-asia-southeast1-prod/tryon/50e9dd018a5d4beca8?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=snapedit-db-1%40mvietnam95.iam.gserviceaccount.com%2F20260521%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260521T163015Z&X-Goog-Expires=172800&X-Goog-SignedHeaders=host&X-Goog-Signature=a2f85caca2bd784a0bd84874bba06e7427299cd430bf90acd8d7ff3b20a2d7367853096d3f49720e38326e63cef341d441ff34135bfbd8eeb0ca6b4d89490c0446d226510d7f57410e658c3b6938eae9ce2333cf57f1b139df8310f29639f47e6e52ecd9cabaa771450f9da991f35024d96b8d025aa596243c6d7bfcbf1fa6c8d8ca70d5ac642d614130ff1b2bdf891b1e47e2732a13195941d5426b3a5a481c81502ab25a9615cd4d20432dfc465c6d293f8c2bc78ae80ac0fa234468d4fdb0ba1e04219aaa448b17c89083f7455965c2a3b3825739388685488ff5770c9452c6dd0cc91b7415567c38ea75fb96a3f6bcb1c1979195ab94425ad3efac066565",
+    "selfieUrl": "https://tryon-assets.c886bcdc3fa2f5f329464cc59f36a72f.r2.cloudflarestorage.com/quality-tests/selfies/test-selfie.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=a88ee3e21695588d9fe96acb838d443b%2F20260521%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260521T162821Z&X-Amz-Expires=7200&X-Amz-Signature=49e1e96c6cf2598ce8837e561f9102614620bdaa47108ff1a7f919dee78424a9&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+    "prodUrl": "https://tryon-assets.c886bcdc3fa2f5f329464cc59f36a72f.r2.cloudflarestorage.com/quality-tests/products/mannequin.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=a88ee3e21695588d9fe96acb838d443b%2F20260521%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260521T163020Z&X-Amz-Expires=7200&X-Amz-Signature=f9aa99fba0ededf1d2fe584dd200454cdaa9d4285a854d507a1e764da7ceb8f1&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+  },
+  {
+    "testId": 5,
+    "name": "lifestyle-complex",
+    "description": "Lifestyle image with background complexity",
+    "success": true,
+    "durationMs": 11986,
+    "outputImageUrl": "https://storage.googleapis.com/enhance-asia-southeast1-prod/tryon/ca8cbfad5ece4adfa7?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=snapedit-db-1%40mvietnam95.iam.gserviceaccount.com%2F20260521%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260521T163032Z&X-Goog-Expires=172800&X-Goog-SignedHeaders=host&X-Goog-Signature=530eb584e63d9a63987e2e693066859468cc7b68b78a992e12b3aa2cafdbb7e25761c8eeea16008e4503bce6d029d8385e59d3c9800c4c432efe218240948174fbddeda64038609906ce94350eaeee223228343ca4532ffdd74de5b76c4bc1779bdd97343a39b2421ee453471c4a07f54d56d86e86c174d680e3400b9d20ae6c9d5bf3ed264fed6b6ba63de965dfb7b9343b598c8475774fc1d3424def0f205781a595965245cd9a4de39ae0433c2a9c296af118e6893db22aedfd89a678cf60c32a3cc54ebd0a178f2ae7701be02e102cf5873e37ee9fe0ffea3074d929965653b60b0c34447d98f4b87ec809d7534fdcd8b1abe73b9029cb817edc310685eb",
+    "selfieUrl": "https://tryon-assets.c886bcdc3fa2f5f329464cc59f36a72f.r2.cloudflarestorage.com/quality-tests/selfies/test-selfie.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=a88ee3e21695588d9fe96acb838d443b%2F20260521%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260521T162821Z&X-Amz-Expires=7200&X-Amz-Signature=49e1e96c6cf2598ce8837e561f9102614620bdaa47108ff1a7f919dee78424a9&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+    "prodUrl": "https://tryon-assets.c886bcdc3fa2f5f329464cc59f36a72f.r2.cloudflarestorage.com/quality-tests/products/lifestyle-complex.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=a88ee3e21695588d9fe96acb838d443b%2F20260521%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260521T163038Z&X-Amz-Expires=7200&X-Amz-Signature=936365abec99c18e88ee3f70e8b815a6af4a4301f63e52ed91b023f52de85169&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject"
+  }
+]

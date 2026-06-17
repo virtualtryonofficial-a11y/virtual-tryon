@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FitRoom Try-On Quality Comparison Report</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f7f9fa;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #1a73e8;
+    }
+    .test-case {
+      background: white;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .test-case-title {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      color: #202124;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    .images-grid {
+      display: flex;
+      gap: 20px;
+      justify-content: space-around;
+      flex-wrap: wrap;
+    }
+    .image-container {
+      text-align: center;
+      flex: 1;
+      min-width: 250px;
+      max-width: 32%;
+    }
+    .image-container img {
+      width: 100%;
+      height: auto;
+      border-radius: 4px;
+      border: 1px solid #e0e0e0;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      background-color: #f0f0f0;
+    }
+    .image-label {
+      font-weight: bold;
+      margin-top: 8px;
+      font-size: 14px;
+      color: #5f6368;
+    }
+    .notes-box {
+      margin-top: 15px;
+      padding: 10px;
+      background-color: #f1f3f4;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>FitRoom AI Try-On Quality Comparison</h1>
+  <p style="text-align: center; font-size: 16px;">Comparing different product image types against the same user selfie.</p>
+
+  <!-- Test 1 -->
+  <div class="test-case">
+    <div class="test-case-title">Test 1: Isolated Garment Image on Plain White Background</div>
+    <div class="images-grid">
+      <div class="image-container">
+        <img src="selfie/selfie.png" alt="Selfie">
+        <div class="image-label">Input Selfie (compressed)</div>
+      </div>
+      <div class="image-container">
+        <img src="product-images/isolated.png" alt="Garment">
+        <div class="image-label">Product Image (Isolated Garment)</div>
+      </div>
+      <div class="image-container">
+        <img src="outputs/1-isolated.jpg" alt="Result">
+        <div class="image-label">Try-On Output (1-isolated.jpg)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test 2 -->
+  <div class="test-case">
+    <div class="test-case-title">Test 2: Model-Worn Image</div>
+    <div class="images-grid">
+      <div class="image-container">
+        <img src="selfie/selfie.png" alt="Selfie">
+        <div class="image-label">Input Selfie (compressed)</div>
+      </div>
+      <div class="image-container">
+        <img src="product-images/model-worn.jpg" alt="Garment">
+        <div class="image-label">Product Image (Model-Worn)</div>
+      </div>
+      <div class="image-container">
+        <img src="outputs/2-model-worn.jpg" alt="Result">
+        <div class="image-label">Try-On Output (2-model-worn.jpg)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test 3 -->
+  <div class="test-case">
+    <div class="test-case-title">Test 3: Flat Lay Image</div>
+    <div class="images-grid">
+      <div class="image-container">
+        <img src="selfie/selfie.png" alt="Selfie">
+        <div class="image-label">Input Selfie (compressed)</div>
+      </div>
+      <div class="image-container">
+        <img src="product-images/flat-lay.jpg" alt="Garment">
+        <div class="image-label">Product Image (Flat Lay)</div>
+      </div>
+      <div class="image-container">
+        <img src="outputs/3-flat-lay.jpg" alt="Result">
+        <div class="image-label">Try-On Output (3-flat-lay.jpg)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test 4 -->
+  <div class="test-case">
+    <div class="test-case-title">Test 4: Mannequin Image</div>
+    <div class="images-grid">
+      <div class="image-container">
+        <img src="selfie/selfie.png" alt="Selfie">
+        <div class="image-label">Input Selfie (compressed)</div>
+      </div>
+      <div class="image-container">
+        <img src="product-images/mannequin.jpg" alt="Garment">
+        <div class="image-label">Product Image (Mannequin)</div>
+      </div>
+      <div class="image-container">
+        <img src="outputs/4-mannequin.jpg" alt="Result">
+        <div class="image-label">Try-On Output (4-mannequin.jpg)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test 5 -->
+  <div class="test-case">
+    <div class="test-case-title">Test 5: Lifestyle / Complex Image</div>
+    <div class="images-grid">
+      <div class="image-container">
+        <img src="selfie/selfie.png" alt="Selfie">
+        <div class="image-label">Input Selfie (compressed)</div>
+      </div>
+      <div class="image-container">
+        <img src="product-images/lifestyle-complex.jpg" alt="Garment">
+        <div class="image-label">Product Image (Lifestyle/Complex)</div>
+      </div>
+      <div class="image-container">
+        <img src="outputs/5-lifestyle-complex.jpg" alt="Result">
+        <div class="image-label">Try-On Output (5-lifestyle-complex.jpg)</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
