@@ -130,7 +130,7 @@ export class TryonService {
           text: resolvedTenant.watermarkText || resolvedTenant.name,
           scale: resolvedTenant.watermarkScale ?? 0.21,
           position: resolvedTenant.watermarkPosition ?? 'bottom-right',
-          opacity: resolvedTenant.watermarkType === 'pattern-text' ? 0.10 : (resolvedTenant.watermarkOpacity ?? 0.85),
+          opacity: resolvedTenant.watermarkType === 'pattern-text' ? 0.10 : (resolvedTenant.watermarkOpacity ?? 0.68),
           rotation: resolvedTenant.watermarkRotation ?? -30,
           spacing: resolvedTenant.watermarkSpacing ?? 345,
           tenantId: resolvedTenant.id,

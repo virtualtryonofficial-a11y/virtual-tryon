@@ -154,6 +154,7 @@ export async function processTryOn(job: Job<TryonJobPayload>) {
     if (tenantConfig && tenantConfig.watermark) {
       tenantConfig.watermark.type = 'pattern-logo';
       tenantConfig.watermark.keyOrUrl = 'MomzCradle_Water_mark.png';
+      tenantConfig.watermark.opacity = 0.68;
       const wmResult = await applyWatermarkWithMetrics(imageBuffer, tenantConfig.watermark);
       finalBuffer = wmResult.buffer;
       logger.info({

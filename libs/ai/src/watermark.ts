@@ -253,8 +253,8 @@ class PatternLogoStrategy implements WatermarkStrategy {
     const mainWidth = mainMeta.width || 1024;
     const mainHeight = mainMeta.height || 1024;
 
-    const rawOpacity = config.opacity ?? 0.15;
-    const opacity = Math.min(0.40, Math.max(0.02, rawOpacity));
+    const rawOpacity = config.opacity ?? 0.68;
+    const opacity = Math.min(0.85, Math.max(0.05, rawOpacity));
 
     const rawSpacing = config.spacing ?? 345;
     const spacing = Math.min(650, Math.max(150, rawSpacing));
