@@ -7,7 +7,7 @@
     "dev": "concurrently \"pnpm dev:api\" \"pnpm dev:worker\"",
     "dev:api": "pnpm --filter @trail/api dev",
     "dev:worker": "pnpm --filter @trail/worker dev",
-    "start": "concurrently \"pnpm --filter @trail/api start:prod\" \"pnpm --filter @trail/worker start\"",
+    "start": "node --import tsx --max-old-space-size=280 monolith.ts",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
