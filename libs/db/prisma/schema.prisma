@@ -29,9 +29,17 @@ model TenantConfig {
   complimentTone String   @default("friendly")  // friendly | luxury | playful
   logoUrl        String?
   segmindModel   String   @default("fashion-tryon-v1")
-  buttonStyle    String   @default("rounded")  // rounded | square | capsule
-  widgetTheme    String   @default("light")    // light | dark | glassmorphism
-  updatedAt      DateTime @updatedAt
+  buttonStyle       String   @default("rounded")  // rounded | square | capsule
+  widgetTheme       String   @default("light")    // light | dark | glassmorphism
+  watermarkKey      String?
+  watermarkScale    Float    @default(0.21)
+  watermarkPosition String   @default("bottom-right")
+  watermarkOpacity  Float    @default(0.85)
+  watermarkType     String   @default("corner-logo") // corner-logo | pattern-text | pattern-logo | hybrid
+  watermarkText     String?
+  watermarkRotation Float    @default(-30)
+  watermarkSpacing  Int      @default(345)
+  updatedAt         DateTime @updatedAt
 }
 
 model Product {

@@ -4,7 +4,7 @@ import pino from 'pino';
 import { TryonJobPayload } from '@trail/queue';
 import { updateTryonRequest, prisma } from '@trail/db';
 import { getSignedReadUrl, upload } from '@trail/storage';
-import { getProvider, generateCompliment, selectBestGarmentImage } from '@trail/ai';
+import { getProvider, generateCompliment, selectBestGarmentImage, applyWatermarkWithMetrics } from '@trail/ai';
 import { config } from '@trail/config';
 import * as Sentry from '@sentry/node';
 
@@ -149,11 +149,23 @@ export async function processTryOn(job: Job<TryonJobPayload>) {
       throw new Error(`Provider ${result.provider} returned success but no image buffer was resolved`);
     }
 
+    // STEP 4.5: Apply watermark if configured
+    let finalBuffer = imageBuffer;
+    if (tenantConfig && tenantConfig.watermark) {
+      const wmResult = await applyWatermarkWithMetrics(imageBuffer, tenantConfig.watermark);
+      finalBuffer = wmResult.buffer;
+      logger.info({
+        tenantId,
+        requestId,
+        ...wmResult.metrics
+      }, 'Watermark telemetry runtime metrics');
+    }
+
     // STEP 5: Upload generated image to R2 with local retries
     const uploadStart = Date.now();
     const generatedKey = `${tenantId}/generated/${requestId}`;
     await withRetry(
-      () => upload(generatedKey, imageBuffer, 'image/jpeg'),
+      () => upload(generatedKey, finalBuffer, 'image/jpeg'),
       { retries: 3, delayMs: 1000, name: 'Cloudflare R2 Upload' }
     );
     const uploadMs = Date.now() - uploadStart;

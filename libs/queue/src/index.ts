@@ -10,6 +10,17 @@ export interface TryonJobPayload {
   config: {
     segmindModel: string;
     complimentTone: 'friendly' | 'luxury' | 'playful';
+    watermark?: {
+      type?: 'corner-logo' | 'pattern-text' | 'pattern-logo' | 'hybrid' | string;
+      keyOrUrl?: string | null;
+      text?: string | null;
+      scale?: number;
+      position?: string;
+      opacity: number;
+      rotation?: number;
+      spacing?: number;
+      tenantId?: string;
+    } | null;
   };
 }
 

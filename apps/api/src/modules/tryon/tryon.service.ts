@@ -124,6 +124,17 @@ export class TryonService {
       config: {
         segmindModel: resolvedTenant.segmindModel,
         complimentTone: resolvedTenant.complimentTone as any,
+        watermark: {
+          type: resolvedTenant.watermarkType || 'corner-logo',
+          keyOrUrl: resolvedTenant.watermarkKey || resolvedTenant.logoUrl || null,
+          text: resolvedTenant.watermarkText || resolvedTenant.name,
+          scale: resolvedTenant.watermarkScale ?? 0.21,
+          position: resolvedTenant.watermarkPosition ?? 'bottom-right',
+          opacity: resolvedTenant.watermarkType === 'pattern-text' ? 0.10 : (resolvedTenant.watermarkOpacity ?? 0.85),
+          rotation: resolvedTenant.watermarkRotation ?? -30,
+          spacing: resolvedTenant.watermarkSpacing ?? 345,
+          tenantId: resolvedTenant.id,
+        },
       },
     };
 
