@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "lastUpdated": "2026-07-01",
+  "name": "Nappa Dori",
+  "tenantId": "nappa-dori",
+  "publicWidgetKey": "placeholder-key-replace-later",
+  "welcomeTitle": "Welcome to Nappa Dori Showcase",
+  "description": "Experience our latest collections with state-of-the-art AI virtual try-on.",
+  "logoUrl": "/assets/brands/nappa-dori/logo.png",
+  "bannerUrl": "/assets/placeholders/banner.webp",
+  "theme": {
+    "primaryColor": "#854d0e",
+    "accentColor": "#ca8a04",
+    "widgetTheme": "dark"
+  },
+  "products": [
+    {
+      "id": "nappa-dori-p1",
+      "shopifyProductId": "placeholder-prod-id-1",
+      "name": "Product 1",
+      "price": "$--.--",
+      "imageUrl": "/assets/placeholders/product.webp"
+    },
+    {
+      "id": "nappa-dori-p2",
+      "shopifyProductId": "placeholder-prod-id-2",
+      "name": "Product 2",
+      "price": "$--.--",
+      "imageUrl": "/assets/placeholders/product.webp"
+    },
+    {
+      "id": "nappa-dori-p3",
+      "shopifyProductId": "placeholder-prod-id-3",
+      "name": "Product 3",
+      "price": "$--.--",
+      "imageUrl": "/assets/placeholders/product.webp"
+    }
+  ]
+}

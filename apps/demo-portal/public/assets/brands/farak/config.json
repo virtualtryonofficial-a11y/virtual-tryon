@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "lastUpdated": "2026-07-01",
+  "name": "Farak",
+  "tenantId": "farak",
+  "publicWidgetKey": "placeholder-key-replace-later",
+  "welcomeTitle": "Welcome to Farak Showcase",
+  "description": "Experience our latest collections with state-of-the-art AI virtual try-on.",
+  "logoUrl": "/assets/brands/farak/logo.avif",
+  "bannerUrl": "/assets/placeholders/banner.webp",
+  "theme": {
+    "primaryColor": "#9a3412",
+    "accentColor": "#ea580c",
+    "widgetTheme": "dark"
+  },
+  "products": [
+    {
+      "id": "farak-p1",
+      "shopifyProductId": "placeholder-prod-id-1",
+      "name": "Farak Custom Garment",
+      "price": "$--.--",
+      "imageUrl": "/assets/brands/farak/products/product1.webp"
+    }
+  ]
+}

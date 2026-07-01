@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "lastUpdated": "2026-07-01",
+  "name": "Onhete",
+  "tenantId": "onhete",
+  "publicWidgetKey": "placeholder-key-replace-later",
+  "welcomeTitle": "Welcome to Onhete Showcase",
+  "description": "Experience our latest collections with state-of-the-art AI virtual try-on.",
+  "logoUrl": "/assets/brands/onhete/logo.svg",
+  "bannerUrl": "/assets/placeholders/banner.webp",
+  "theme": {
+    "primaryColor": "#4f46e5",
+    "accentColor": "#818cf8",
+    "widgetTheme": "light"
+  },
+  "products": [
+    {
+      "id": "onhete-p1",
+      "shopifyProductId": "placeholder-prod-id-1",
+      "name": "Onhete Custom Garment",
+      "price": "$--.--",
+      "imageUrl": "/assets/brands/onhete/products/onhete.webp"
+    }
+  ]
+}
