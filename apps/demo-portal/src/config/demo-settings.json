@@ -2,6 +2,5 @@
   "maxTryOnsPerSession": 5,
   "downloadEnabled": true,
   "showDemoBanner": true,
-  "bannerText": "Demo Sandbox: Previewing the Virtual Try-On integration.",
-  "useMock": true
+  "bannerText": "Demo Sandbox: Previewing the Virtual Try-On integration."
 }

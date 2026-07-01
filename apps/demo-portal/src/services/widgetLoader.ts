@@ -1,5 +1,4 @@
 import type { BrandConfig, ProductConfig } from '../types';
-import demoSettings from '../config/demo-settings.json';
 
 let scriptLoadingPromise: Promise<void> | null = null;
 
@@ -53,7 +52,6 @@ export async function launchTryOn(brand: BrandConfig, product: ProductConfig): P
       productId: product.shopifyProductId,
       tenantApiKey: brand.publicWidgetKey,
       apiUrl: apiUrl,
-      useMock: demoSettings.useMock || false,
       debug: true
     });
   } else {
