@@ -20,7 +20,6 @@ export function loadWidgetScript(): Promise<void> {
       'https://virtual-tryon-api-service.onrender.com/widget.js'; // Fallback to public widget delivery
 
     script.src = widgetUrl;
-    script.type = 'module';
     script.async = true;
 
     script.onload = () => {

@@ -7,7 +7,7 @@ export function applyBrandMeta(brand: BrandConfig) {
   // 2. Favicon
   const faviconLink = (document.querySelector("link[rel~='icon']") as HTMLLinkElement) || document.createElement('link');
   faviconLink.rel = 'icon';
-  faviconLink.href = `/assets/brands/${brand.id}/logo.svg`;
+  faviconLink.href = brand.logoUrl;
   if (!faviconLink.parentNode) {
     document.head.appendChild(faviconLink);
   }
@@ -24,12 +24,12 @@ export function applyBrandMeta(brand: BrandConfig) {
   // 4. OpenGraph SEO Tags
   updateMetaTag('property', 'og:title', `${brand.name} AI Try-On`);
   updateMetaTag('property', 'og:description', brand.description);
-  updateMetaTag('property', 'og:image', `/assets/brands/${brand.id}/banner.webp`);
+  updateMetaTag('property', 'og:image', brand.bannerUrl);
   
   // 5. Twitter SEO Tags
   updateMetaTag('name', 'twitter:title', `${brand.name} AI Try-On`);
   updateMetaTag('name', 'twitter:description', brand.description);
-  updateMetaTag('name', 'twitter:image', `/assets/brands/${brand.id}/banner.webp`);
+  updateMetaTag('name', 'twitter:image', brand.bannerUrl);
 }
 
 export function resetMeta() {
