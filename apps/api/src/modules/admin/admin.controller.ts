@@ -10,11 +10,13 @@ import {
   Header,
   Req,
 } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { AdminGuard } from '../../guards/admin.guard';
 import { AdminService } from './admin.service';
 
 @Controller('admin')
+@SkipThrottle()
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 

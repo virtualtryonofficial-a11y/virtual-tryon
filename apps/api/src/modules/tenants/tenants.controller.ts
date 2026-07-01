@@ -1,8 +1,10 @@
 import { Controller, Get, Param, UseGuards, Req, Header } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { TenantGuard } from '../../guards/tenant.guard';
 import { TenantsService } from './tenants.service';
 
 @Controller('v1/tenant')
+@SkipThrottle({ tryon: true })
 export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
 
