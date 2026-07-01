@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import './instrument';
 import { NestFactory, HttpAdapterHost } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
@@ -15,8 +16,7 @@ import { AppModule } from './app.module';
 import { RequestSanitizationPipe } from './common/pipes/sanitize.pipe';
 import { SentryExceptionFilter } from './common/filters/sentry.filter';
 import { json, urlencoded } from 'express';
-import { AdminController } from './modules/admin/admin.controller';
-import { TenantsController } from './modules/tenants/tenants.controller';
+
 
 // ── CORS allowlist ────────────────────────────────────────────────────────────
 // Uses EXACT Set membership — no substring matching to prevent
@@ -77,9 +77,6 @@ function isShopifyOrigin(origin: string): boolean {
 }
 
 async function bootstrap() {
-  console.log('DEBUG: AdminController representation:', AdminController.toString());
-  console.log('DEBUG: TenantsController representation:', TenantsController.toString());
-
   const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
 
   app.useLogger(app.get(Logger));
