@@ -32,6 +32,7 @@ export interface DemoSettings {
   downloadEnabled: boolean;
   showDemoBanner: boolean;
   bannerText: string;
+  useMock?: boolean;
 }
 
 // Global declaration for window.TryOnWidget to bypass TypeScript validation on window properties
