@@ -18,7 +18,14 @@ import { AdminService } from './admin.service';
 @Controller('admin')
 @SkipThrottle()
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(private adminService: AdminService) {
+    // Defensive: if reflect-metadata isn't loaded before NestJS boots,
+    // DI may fail to inject the service. Since AdminService has no
+    // injected dependencies, we can safely instantiate it directly.
+    if (!this.adminService) {
+      this.adminService = new AdminService();
+    }
+  }
 
   @Get('dashboard')
   @Header('Content-Type', 'text/html')

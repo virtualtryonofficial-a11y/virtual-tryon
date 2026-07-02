@@ -6,7 +6,12 @@ import { TenantsService } from './tenants.service';
 @Controller('v1/tenant')
 @SkipThrottle({ tryon: true })
 export class TenantsController {
-  constructor(private readonly tenantsService: TenantsService) {}
+  constructor(private tenantsService: TenantsService) {
+    // Defensive: instantiate directly if DI fails
+    if (!this.tenantsService) {
+      this.tenantsService = new TenantsService();
+    }
+  }
 
   @Get(':tenantId/config')
   @UseGuards(TenantGuard)
