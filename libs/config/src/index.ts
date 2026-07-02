@@ -34,7 +34,7 @@ export const config = {
   },
   fitroom: {
     apiKey: process.env['FITROOM_API_KEY'] || '',
-    apiUrl: process.env['FITROOM_API_URL'] || '',
+    apiUrl: process.env['FITROOM_API_URL'] || 'https://platform.fitroom.app/api/tryon/v2/tasks',
   },
   aiProvider: requireEnv('AI_PROVIDER'),
   gemini: {
