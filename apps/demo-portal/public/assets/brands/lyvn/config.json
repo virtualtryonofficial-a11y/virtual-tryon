@@ -19,7 +19,8 @@
       "shopifyProductId": "placeholder-prod-id-1",
       "name": "LYVN Custom Garment",
       "price": "$--.--",
-      "imageUrl": "/assets/brands/lyvn/products/product1.webp"
+      "imageUrl": "/assets/brands/lyvn/products/product1.webp",
+      "category": "upper"
     }
   ]
 }

@@ -20,14 +20,19 @@ import { isValidShopDomain, generateOAuthState, verifyOAuthHmac, verifyWebhookHm
 
 @Controller('shopify')
 export class ShopifyController {
-  private readonly logger = new Logger(ShopifyController.name);
+  private readonly logger: Logger;
   private readonly redis: Redis;
 
   constructor(
-    private readonly shopifyService: ShopifyService,
+    private shopifyService: ShopifyService,
     private readonly shopifyWebhooks: ShopifyWebhooks
   ) {
+    this.logger = new Logger(ShopifyController.name);
     this.redis = new Redis(appConfig.redis.url, { maxRetriesPerRequest: null });
+    // Defensive: instantiate directly if DI fails
+    if (!this.shopifyService) {
+      this.shopifyService = new ShopifyService();
+    }
   }
 
   /**

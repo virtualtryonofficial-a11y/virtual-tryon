@@ -19,7 +19,8 @@
       "shopifyProductId": "placeholder-prod-id-1",
       "name": "Onhete Custom Garment",
       "price": "$--.--",
-      "imageUrl": "/assets/brands/onhete/products/onhete.webp"
+      "imageUrl": "/assets/brands/onhete/products/onhete.webp",
+      "category": "upper"
     }
   ]
 }

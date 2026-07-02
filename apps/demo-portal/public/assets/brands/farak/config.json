@@ -19,7 +19,8 @@
       "shopifyProductId": "placeholder-prod-id-1",
       "name": "Farak Custom Garment",
       "price": "$--.--",
-      "imageUrl": "/assets/brands/farak/products/product1.webp"
+      "imageUrl": "/assets/brands/farak/products/product1.webp",
+      "category": "upper"
     }
   ]
 }

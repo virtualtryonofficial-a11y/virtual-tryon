@@ -127,14 +127,15 @@ async function seed() {
           },
           update: {
             imageUrl: publicImageUrl,
-            preferredGarmentImage: publicImageUrl
+            preferredGarmentImage: publicImageUrl,
+            category: product.category || 'upper'
           },
           create: {
             tenantId: brandId,
             shopifyProductId: product.shopifyProductId,
             imageUrl: publicImageUrl,
             preferredGarmentImage: publicImageUrl,
-            category: 'tops'
+            category: product.category || 'upper'
           }
         });
         console.log(`      Garment Product registered in Postgres.`);

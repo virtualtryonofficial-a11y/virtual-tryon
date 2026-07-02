@@ -110,11 +110,45 @@ export class FitRoomProvider implements VirtualTryOnProvider {
       }
       const garmentBlob = new Blob([garmentBuffer], { type: 'image/jpeg' });
 
-      // 2. Build standard FormData payload
+      // 2. Map category safely to FitRoom's expected values: upper, lower, or full_body
+      let clothType = 'upper';
+      if (input.category) {
+        const cleanCat = input.category.toLowerCase().trim();
+        if (
+          cleanCat.includes('upper') ||
+          cleanCat.includes('top') ||
+          cleanCat.includes('shirt') ||
+          cleanCat.includes('jacket') ||
+          cleanCat.includes('outerwear')
+        ) {
+          clothType = 'upper';
+        } else if (
+          cleanCat.includes('lower') ||
+          cleanCat.includes('bottom') ||
+          cleanCat.includes('pant') ||
+          cleanCat.includes('skirt') ||
+          cleanCat.includes('jeans') ||
+          cleanCat.includes('shorts')
+        ) {
+          clothType = 'lower';
+        } else if (
+          cleanCat.includes('overall') ||
+          cleanCat.includes('full') ||
+          cleanCat.includes('dress') ||
+          cleanCat.includes('suit') ||
+          cleanCat.includes('suite') ||
+          cleanCat.includes('onesie') ||
+          cleanCat.includes('romper')
+        ) {
+          clothType = 'full_body';
+        }
+      }
+
+      // 3. Build standard FormData payload
       const formData = new FormData();
       formData.append('model_image', modelBlob, 'model.jpg');
       formData.append('cloth_image', garmentBlob, 'garment.jpg');
-      formData.append('cloth_type', input.category || 'upper');
+      formData.append('cloth_type', clothType);
 
       // 3. Submit async try-on task to FitRoom
       logger.info({ provider: providerName, requestId: input.requestId }, 'Submitting async task to FitRoom API');

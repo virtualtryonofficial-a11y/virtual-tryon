@@ -19,7 +19,8 @@
       "shopifyProductId": "placeholder-prod-id-1",
       "name": "October Custom Garment",
       "price": "$--.--",
-      "imageUrl": "/assets/brands/october/products/october-product.webp"
+      "imageUrl": "/assets/brands/october/products/october-product.webp",
+      "category": "full_body"
     }
   ]
 }
