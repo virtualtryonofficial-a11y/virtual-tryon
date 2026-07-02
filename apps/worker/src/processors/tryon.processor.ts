@@ -166,9 +166,9 @@ export async function processTryOn(job: Job<TryonJobPayload>) {
       throw new Error(`Provider ${result.provider} returned success but no image buffer was resolved`);
     }
 
-    // STEP 4.5: Apply watermark if configured
+    // STEP 4.5: Apply watermark if configured (Only for MomzCradle / thottil-maternity)
     let finalBuffer = imageBuffer;
-    if (tenantConfig && tenantConfig.watermark) {
+    if (tenantConfig && tenantConfig.watermark && tenantId === 'thottil-maternity') {
       tenantConfig.watermark.type = 'pattern-logo';
       tenantConfig.watermark.keyOrUrl = 'MomzCradle_Water_mark.png';
       tenantConfig.watermark.opacity = 0.68;
