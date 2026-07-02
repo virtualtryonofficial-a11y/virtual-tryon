@@ -371,8 +371,11 @@ export class AdminService {
       await tryonQueue.clean(0, 1000, 'failed');
       await tryonQueue.clean(0, 1000, 'completed');
 
-      // Obliterate the dead-letter queue completely
-      await dlqQueue.obliterate({ force: true });
+      // Clean all jobs from tryon-dlq instead of obliterating
+      // (obliterate uses the KEYS command which is blocked on managed Render Redis)
+      await dlqQueue.drain();
+      await dlqQueue.clean(0, 1000, 'failed');
+      await dlqQueue.clean(0, 1000, 'completed');
 
       return { success: true };
     } finally {
