@@ -3,6 +3,11 @@ import { z } from 'zod';
 import * as Sentry from '@sentry/node';
 import pino from 'pino';
 import sharp from 'sharp';
+
+// Enforce strict memory & thread limits for Render starter instance (max 512MB RAM OOM protection)
+sharp.cache({ memory: 15, files: 2, items: 10 });
+sharp.concurrency(1);
+
 import { config } from '@trail/config';
 import { validateExternalImageUrl, SsrfBlockedError } from '@trail/security';
 import {

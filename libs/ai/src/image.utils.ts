@@ -1,5 +1,9 @@
 import sharp from 'sharp';
 
+// Enforce strict memory & thread limits for Render starter instance (max 512MB RAM OOM protection)
+sharp.cache({ memory: 15, files: 2, items: 10 });
+sharp.concurrency(1);
+
 export async function compressForTryOn(inputBuffer: Buffer): Promise<Buffer> {
   const originalSize = inputBuffer.length;
   
