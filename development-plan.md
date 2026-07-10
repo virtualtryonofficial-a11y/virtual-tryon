@@ -589,3 +589,305 @@ End each task:
 - [ ] `/admin/cost-estimate` shows cache hit rate
 - [ ] Size Intelligence feature flag wired (stub)
 - [ ] No OpenAI dependency anywhere in codebase
+
+---
+
+## Block 15 — Lead Capture & AI Remarketing Platform
+
+**Agent task — `AGENT_TASK_021`:**
+```
+Lead Capture & AI Remarketing Platform
+
+Goal:
+Transform Virtual-Trail from an AI Virtual Try-On tool into a Lead Generation & Remarketing Platform.
+
+Every successful AI Try-On should become a qualified marketing lead that merchants can use for WhatsApp campaigns, abandoned cart recovery, personalized promotions, and future customer engagement.
+
+The generated image must remain locked until the customer submits their contact information.
+The feature must integrate with the existing Try-On pipeline without modifying the AI generation workflow.
+
+Objectives:
+Implement a complete Lead Capture module that:
+- Collects customer details before revealing the generated image.
+- Stores customer information securely.
+- Associates every lead with its generated Try-On.
+- Supports future WhatsApp marketing campaigns.
+- Supports multi-tenant architecture.
+- Requires no AI regeneration for future campaigns.
+
+Existing Flow:
+Customer Uploads Selfie
+        │
+        ▼
+AI Generation
+        │
+        ▼
+Generated Image
+        │
+        ▼
+Customer Leaves
+(Merchant loses the customer forever)
+
+New Flow:
+Customer Uploads Selfie
+        │
+        ▼
+AI Generation
+        │
+        ▼
+Generated Image Stored
+        │
+        ▼
+Blurred Preview
+        │
+        ▼
+Lead Capture (Name + Phone)
+        │
+        ▼
+Lead Saved
+        │
+        ▼
+Unlock Image
+        │
+        ▼
+Customer Downloads
+        │
+        ▼
+Merchant Can Reuse Same Image For WhatsApp Marketing
+```
+
+---
+
+### AGENT_TASK_021A — Database
+
+```
+Create a new Lead entity.
+
+Required fields:
+- id
+- tenantId
+- tryonRequestId
+- customerName
+- phoneNumber
+- countryCode
+- marketingConsent
+- consentTimestamp
+- generatedImageKey
+- originalImageKey
+- productId
+- productTitle
+- status
+- createdAt
+- updatedAt
+
+Requirements:
+- Every Lead belongs to exactly one TryOnRequest.
+- Every TryOnRequest may have only one Lead.
+- No duplicate leads.
+- Multi-tenant isolation must be enforced.
+
+Checkpoint:
+- Prisma migration succeeds.
+- Relations verified.
+```
+
+---
+
+### AGENT_TASK_021B — API
+
+```
+Extend existing APIs.
+
+GET /v1/tryon/:jobId
+When generation completes, return:
+- status
+- previewImage
+- requiresLeadCapture
+- unlockToken
+(Do NOT return the original generated image)
+
+Create POST /v1/leads
+Body:
+- tryonRequestId
+- customerName
+- phoneNumber
+- countryCode
+- marketingConsent
+
+Validation:
+- Tenant exists.
+- Try-On exists.
+- Try-On completed.
+- Lead not already created.
+- Phone number valid.
+
+Store:
+- Lead
+- Generated image reference
+- Original image reference
+
+Return:
+- unlockToken
+
+Create POST /v1/tryon/unlock
+Input:
+- unlockToken
+
+Return:
+- Signed image URL
+- Compliment
+- Download URL
+
+Checkpoint:
+- Image cannot be accessed without creating a lead.
+```
+
+---
+
+### AGENT_TASK_021C — Widget
+
+```
+Modify widget flow.
+
+Current:
+Upload → Processing → Result
+
+New:
+Upload → Processing → Blur Preview → Lead Capture → Unlock → Result
+
+Lead Form Fields:
+- Name
+- Phone Number
+- Country Code
+- Checkbox: "I agree to receive WhatsApp updates and promotional messages."
+
+Validation:
+- Required fields.
+- Phone format.
+- Prevent duplicate submission.
+
+Checkpoint:
+- User cannot bypass the lead form.
+```
+
+---
+
+### AGENT_TASK_021D — Merchant Dashboard
+
+```
+Create new module: Leads
+
+Dashboard:
+- Total Leads
+- Today's Leads
+- Leads by Product
+- Marketing Ready Leads
+
+Lead Details Display:
+- Customer Name
+- Phone
+- Product
+- Generated Image
+- Original Selfie
+- Try-On Date
+- Marketing Consent
+
+Checkpoint:
+- Merchant can search and filter leads.
+```
+
+---
+
+### AGENT_TASK_021E — WhatsApp Remarketing Foundation
+
+```
+Prepare the platform for future campaign automation.
+Every Lead must contain enough information to reuse the original AI-generated image.
+
+Future supported campaigns:
+- Welcome Campaign
+- Cart Recovery
+- Festival Offers
+- Price Drop
+- Back In Stock
+- New Collection
+- Personalized Recommendations
+
+The system must never regenerate AI images. Always reuse the previously generated image stored in Cloudflare R2.
+
+Checkpoint:
+- Generated image can be retrieved using the associated Lead record.
+```
+
+---
+
+### AGENT_TASK_021F — Analytics
+
+```
+Track:
+- Try-On Started
+- Try-On Completed
+- Lead Captured
+- Image Unlocked
+- Download Clicked
+- Share Clicked
+
+Merchant Analytics:
+- Lead Conversion Rate
+- Try-On Conversion Rate
+- Leads Per Product
+- Marketing Ready Leads
+
+Checkpoint:
+- Dashboard metrics update correctly.
+```
+
+---
+
+### AGENT_TASK_021G — Security
+
+```
+Validate:
+- Tenant ownership
+- Try-On ownership
+- Lead ownership
+- Unlock token
+- Signed image URLs
+- Duplicate submissions
+
+Never expose:
+- Raw R2 paths
+- Another tenant's images
+- Another tenant's leads
+
+Checkpoint:
+- Tenant isolation verified.
+```
+
+---
+
+### AGENT_TASK_021H — Production Readiness
+
+```
+Verify:
+- Existing AI pipeline remains unchanged.
+- Worker does not perform additional AI work.
+- No increase in AI generation cost.
+- Lead capture completes in under 300 ms.
+- Unlock API uses existing generated assets only.
+- All existing Try-On functionality continues to work.
+
+Definition of Done:
+- Customer details are captured before image unlock.
+- Lead is linked to the TryOnRequest.
+- Generated image remains protected until lead capture succeeds.
+- Merchant can view all captured leads.
+- Generated image can later be reused for WhatsApp marketing.
+- Multi-tenant security is preserved.
+- Existing AI generation pipeline remains unchanged.
+- Ready for future WhatsApp automation.
+```
+
+
+
+
