@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/main.ts",
+    "build": "tsc",
     "start": "node --import tsx --max-old-space-size=192 src/main.ts"
   },
   "dependencies": {
