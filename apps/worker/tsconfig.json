@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "dist",
+    "noEmit": false,
     "useDefineForClassFields": false
   },
   "include": ["src/**/*"],
