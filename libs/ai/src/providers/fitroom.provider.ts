@@ -149,26 +149,33 @@ export class FitRoomProvider implements VirtualTryOnProvider {
         }
       }
 
-      // 3. Build standard FormData payload
-      const formData = new FormData();
-      formData.append('model_image', modelBlob, 'model.jpg');
-      formData.append('cloth_image', garmentBlob, 'garment.jpg');
-      formData.append('cloth_type', clothType);
+      // 3. Build helper to submit a task
+      let currentClothType = clothType;
+      let response;
+      let taskId = '';
 
-      // 3. Submit async try-on task to FitRoom
-      logger.info({ provider: providerName, requestId: input.requestId }, 'Submitting async task to FitRoom API');
-      const response = await axios.post(
-        apiUrl,
-        formData,
-        {
-          headers: {
-            'X-API-KEY': apiKey,
-          },
-          timeout: 30000,
-        }
-      );
+      const submitTask = async (cType: string) => {
+        const formData = new FormData();
+        formData.append('model_image', modelBlob, 'model.jpg');
+        formData.append('cloth_image', garmentBlob, 'garment.jpg');
+        formData.append('cloth_type', cType);
 
-      const taskId = response.data.task_id || response.data.id;
+        logger.info({ provider: providerName, requestId: input.requestId, clothType: cType }, 'Submitting async task to FitRoom API');
+        const res = await axios.post(
+          apiUrl,
+          formData,
+          {
+            headers: {
+              'X-API-KEY': apiKey,
+            },
+            timeout: 30000,
+          }
+        );
+        return res;
+      };
+
+      response = await submitTask(currentClothType);
+      taskId = response.data.task_id || response.data.id;
       if (!taskId) {
         throw new InvalidProviderResponseError(
           `FitRoom API response missing task identifier: ${JSON.stringify(response.data)}`,
@@ -209,8 +216,31 @@ export class FitRoomProvider implements VirtualTryOnProvider {
             downloadUrl = data.download_signed_url || data.result_url || data.url;
             break;
           } else if (taskStatus === 'FAILED' || taskStatus === 'ERROR') {
+            const reason = data.message || data.reason || 'Unknown processing error';
+
+            // If the failure is due to an unsupported cloth_type (e.g. full_body on a half-body selfie)
+            // we dynamically fallback to trying on the garment as 'upper'
+            if (currentClothType === 'full_body' && reason.toLowerCase().includes('unsupported cloth_type')) {
+              logger.warn({ provider: providerName, taskId, reason }, 'FitRoom full_body not supported for this model image, retrying with cloth_type: upper');
+              currentClothType = 'upper';
+              response = await submitTask(currentClothType);
+              taskId = response.data.task_id || response.data.id;
+              if (!taskId) {
+                throw new InvalidProviderResponseError(
+                  `FitRoom API response missing task identifier on fallback: ${JSON.stringify(response.data)}`,
+                  providerName,
+                  input.tenantId,
+                  input.productId,
+                  Date.now() - start
+                );
+              }
+              attempts = 0; // Reset attempts for the new task
+              taskStatus = (response.data.status || '').toUpperCase();
+              continue;
+            }
+
             throw new InvalidProviderResponseError(
-              `FitRoom task processing failed: ${data.message || 'Unknown processing error'}`,
+              `FitRoom task processing failed: ${reason}`,
               providerName,
               input.tenantId,
               input.productId,
