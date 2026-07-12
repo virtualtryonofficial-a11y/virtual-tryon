@@ -269,7 +269,17 @@ export class FitRoomProvider implements VirtualTryOnProvider {
       const status = error.response?.status;
       let finalError: ProviderError;
 
-      if (error.code === 'ECONNABORTED' || message.includes('timeout')) {
+      const failedUrl = error.config?.url;
+      if (failedUrl && (failedUrl === input.modelImage || failedUrl === input.garmentImage)) {
+        const imageType = failedUrl === input.modelImage ? 'model' : 'garment';
+        finalError = new InvalidProviderResponseError(
+          `Failed to download ${imageType} image: Request failed with status code ${status || 'unknown'}`,
+          providerName,
+          input.tenantId,
+          input.productId,
+          processingMs
+        );
+      } else if (error.code === 'ECONNABORTED' || message.includes('timeout')) {
         finalError = new ProviderTimeoutError(
           `FitRoom API request timed out: ${message}`,
           providerName,

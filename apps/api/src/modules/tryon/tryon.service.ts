@@ -8,7 +8,8 @@ import {
   createProduct,
   createTryonRequest, 
   getTryonRequest,
-  getLeadByTryonRequestId
+  getLeadByTryonRequestId,
+  prisma
 } from '@trail/db';
 import { QUEUE_NAMES, JOB_OPTIONS, TryonJobPayload } from '@trail/queue';
 import { upload, getSignedReadUrl } from '@trail/storage';
@@ -119,6 +120,20 @@ export class TryonService {
 
     if (!product) {
       throw new NotFoundException(`Product ${dto.productId} could not be resolved or created for tenant ${dto.tenantId}`);
+    }
+
+    // Dynamic self-healing: update DB and cache if product image URL changed
+    if (dto.productImageUrl && product.imageUrl !== dto.productImageUrl) {
+      this.logger.log(`[Self-Healing] Stale image URL detected for product ${dto.productId}. Updating from ${product.imageUrl} to ${dto.productImageUrl}`);
+      try {
+        product = await prisma.product.update({
+          where: { id: product.id },
+          data: { imageUrl: dto.productImageUrl },
+        });
+        await this.redis.set(productCacheKey, JSON.stringify(product), 'EX', 600);
+      } catch (updateErr: any) {
+        this.logger.warn(`Failed to update stale product imageUrl in DB: ${updateErr.message}`);
+      }
     }
 
     // 4. Create request in DB
