@@ -187,6 +187,9 @@ const Modal: React.FC<ModalProps> = ({ onClose, productId, tenantId }) => {
       case 'polling':
         return <ProcessingView />;
       case 'awaiting_lead':
+      case 'sending_otp':
+      case 'awaiting_otp':
+      case 'verifying_otp':
       case 'unlocking':
         return <LeadFormView />;
       case 'completed':
