@@ -5,6 +5,9 @@ const ADMIN_AUTH = Buffer.from('admin:44c96cb320ce5577404265f20ff06e044595713c52
 
 export const apiClient = axios.create({
   baseURL: API_URL,
+  headers: {
+    'x-bypass-throttler': 'true',
+  },
   validateStatus: () => true,
 });
 
@@ -12,6 +15,7 @@ export const adminClient = axios.create({
   baseURL: API_URL,
   headers: {
     Authorization: `Basic ${ADMIN_AUTH}`,
+    'x-bypass-throttler': 'true',
   },
   validateStatus: () => true,
 });

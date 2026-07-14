@@ -104,3 +104,166 @@ export async function getTryOnStatus(tenantId: string, jobId: string) {
   if (!response.ok) throw new Error('Failed to fetch status');
   return await response.json();
 }
+
+export async function submitLead(
+  tryonRequestId: string,
+  customerName: string,
+  phoneNumber: string,
+  countryCode: string,
+  marketingConsent: boolean,
+  metadata?: any
+) {
+  const { tenantId, runtimeConfig } = useStore.getState();
+  if (!tenantId) throw new Error('Tenant ID is not resolved');
+
+  if (runtimeConfig.useMock) {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    return { success: true, leadId: 'mock-lead-id', unlockToken: 'mock-unlock-token' };
+  }
+
+  const response = await fetch(
+    `${runtimeConfig.apiUrl}/v1/leads?tenantId=${tenantId}&tenantApiKey=${encodeURIComponent(runtimeConfig.tenantApiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tryonRequestId,
+        customerName,
+        phoneNumber,
+        countryCode,
+        marketingConsent,
+        metadata,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'Failed to submit lead information');
+  }
+
+  return await response.json();
+}
+
+export async function unlockTryOn(unlockToken: string) {
+  const { tenantId, runtimeConfig } = useStore.getState();
+  if (!tenantId) throw new Error('Tenant ID is not resolved');
+
+  if (runtimeConfig.useMock) {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    return {
+      imageUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=1000',
+      downloadUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=1000',
+      compliment: 'Unlocked! You look amazing in this garment.',
+      styleScore: 9.2,
+      expiresAt: Date.now() + 900 * 1000,
+    };
+  }
+
+  const response = await fetch(
+    `${runtimeConfig.apiUrl}/v1/tryon/unlock?tenantId=${tenantId}&tenantApiKey=${encodeURIComponent(runtimeConfig.tenantApiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        unlockToken,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'Failed to unlock high-resolution image');
+  }
+
+  return await response.json();
+}
+
+export async function trackEvent(event: string, metadata?: any) {
+  const { tenantId, runtimeConfig } = useStore.getState();
+  if (!tenantId) return;
+
+  if (runtimeConfig.useMock) {
+    console.log(`[Mock Analytics Event] ${event}`, metadata || {});
+    return;
+  }
+
+  await fetch(
+    `${runtimeConfig.apiUrl}/v1/events?tenantId=${tenantId}&tenantApiKey=${encodeURIComponent(runtimeConfig.tenantApiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event,
+        metadata,
+      }),
+    }
+  ).catch((err) => {
+    console.warn('TryOnWidget: Event tracking failed:', err.message);
+  });
+}
+
+export async function resendOtp(otpSessionId: string) {
+  const { tenantId, runtimeConfig } = useStore.getState();
+  if (!tenantId) throw new Error('Tenant ID is not resolved');
+
+  if (runtimeConfig.useMock) {
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    return {
+      success: true,
+      expiresAt: new Date(Date.now() + 300000).toISOString(),
+      resendAfter: 30
+    };
+  }
+
+  const response = await fetch(
+    `${runtimeConfig.apiUrl}/v1/otp/resend?tenantId=${tenantId}&tenantApiKey=${encodeURIComponent(runtimeConfig.tenantApiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        otpSessionId,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'Failed to resend verification code');
+  }
+
+  return await response.json();
+}
+
+export async function verifyOtp(otpSessionId: string, otp: string) {
+  const { tenantId, runtimeConfig } = useStore.getState();
+  if (!tenantId) throw new Error('Tenant ID is not resolved');
+
+  if (runtimeConfig.useMock) {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    return {
+      success: true,
+      leadId: 'mock-lead-id',
+      unlockToken: 'mock-unlock-token'
+    };
+  }
+
+  const response = await fetch(
+    `${runtimeConfig.apiUrl}/v1/otp/verify?tenantId=${tenantId}&tenantApiKey=${encodeURIComponent(runtimeConfig.tenantApiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        otpSessionId,
+        otp,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'Verification failed');
+  }
+
+  return await response.json();
+}

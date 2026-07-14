@@ -73,3 +73,30 @@ export async function deleteObject(key: string): Promise<void> {
     throw new StorageError(`Delete failed: ${error.message}`);
   }
 }
+
+/**
+ * Download an object from R2 as a Buffer
+ * @param key The R2 key
+ */
+export async function download(key: string): Promise<Buffer> {
+  try {
+    const command = new GetObjectCommand({
+      Bucket: config.r2.bucketName,
+      Key: key,
+    });
+    const response = await s3Client.send(command);
+    if (!response.Body) {
+      throw new Error('Empty response body');
+    }
+    
+    const stream = response.Body as any;
+    return new Promise((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+      stream.on('error', (err: Error) => reject(err));
+      stream.on('end', () => resolve(Buffer.concat(chunks)));
+    });
+  } catch (error: any) {
+    throw new StorageError(`Download failed: ${error.message}`);
+  }
+}

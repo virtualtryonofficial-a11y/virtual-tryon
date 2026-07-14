@@ -2,7 +2,7 @@ import { Controller, Post, Get, Body, Query, UseGuards, Req, Inject } from '@nes
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { TenantGuard } from '../../guards/tenant.guard';
 import { LeadService } from './lead.service';
-import { CreateLeadDto, UnlockTryonDto, LeadResponse } from './lead.dto';
+import { CreateLeadDto, UnlockTryonDto, LeadResponse, TrackEventDto } from './lead.dto';
 
 @Controller('v1')
 export class LeadController {
@@ -18,6 +18,14 @@ export class LeadController {
   async createLead(@Body() dto: CreateLeadDto, @Req() req: any): Promise<LeadResponse> {
     const tenantId = req.tenant.id;
     return this.leadService.createOrUpdateLead(tenantId, dto);
+  }
+
+  @Post('events')
+  @UseGuards(TenantGuard)
+  @Throttle({ standard: { limit: 100, ttl: 60000 }, burst: { limit: 20, ttl: 1000 } })
+  async trackEvent(@Body() dto: TrackEventDto, @Req() req: any) {
+    const tenantId = req.tenant.id;
+    return this.leadService.trackEvent(tenantId, dto);
   }
 
   @Post('tryon/unlock')

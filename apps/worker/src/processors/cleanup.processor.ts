@@ -1,6 +1,6 @@
 import { Job } from 'bullmq';
 import pino from 'pino';
-import { getTryonRequestsForCleanup, updateTryonRequest } from '@trail/db';
+import { getTryonRequestsForCleanup, updateTryonRequest, prisma } from '@trail/db';
 import { deleteObject } from '@trail/storage';
 
 const logger = pino({
@@ -11,6 +11,14 @@ export async function processCleanup(job: Job) {
   logger.info('Starting daily cleanup processor');
   
   try {
+    // 1. Clean up expired OTP sessions
+    logger.info('Cleaning up expired OTP sessions...');
+    const expiredOtp = await prisma.otpSession.deleteMany({
+      where: {
+        expiresAt: { lt: new Date() }
+      }
+    });
+    logger.info({ count: expiredOtp.count }, 'Deleted expired OTP sessions');
     // Rules:
     // - delete user uploads older than 24h
     // - delete generated images older than 7d

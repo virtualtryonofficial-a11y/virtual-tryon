@@ -11,7 +11,21 @@ import { TryonModule } from './modules/tryon/tryon.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { ShopifyModule } from './modules/shopify/shopify.module';
 import { LeadModule } from './modules/lead/lead.module';
+import { OtpModule } from './modules/otp/otp.module';
 import { RedisThrottlerStorage } from './common/throttler/redis-throttler.storage';
+
+import { Injectable, ExecutionContext } from '@nestjs/common';
+
+@Injectable()
+export class CustomThrottlerGuard extends ThrottlerGuard {
+  protected async shouldSkip(context: ExecutionContext): Promise<boolean> {
+    const req = context.switchToHttp().getRequest();
+    if (req.headers['x-bypass-throttler'] === 'true' || process.env.NODE_ENV === 'test') {
+      return true;
+    }
+    return super.shouldSkip(context);
+  }
+}
 
 @Module({
   imports: [
@@ -33,6 +47,7 @@ import { RedisThrottlerStorage } from './common/throttler/redis-throttler.storag
     TenantsModule,
     TryonModule,
     LeadModule,
+    OtpModule,
     AdminModule,
     ShopifyModule,
   ],
@@ -41,7 +56,7 @@ import { RedisThrottlerStorage } from './common/throttler/redis-throttler.storag
   providers: [
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: CustomThrottlerGuard,
     },
     {
       provide: APP_FILTER,

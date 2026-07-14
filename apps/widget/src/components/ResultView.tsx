@@ -1,14 +1,15 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
-import { Download, Sparkles, RefreshCcw, X } from 'lucide-react';
+import { Download, Sparkles, RefreshCcw, X, Loader } from 'lucide-react';
 
 interface ResultViewProps {
   onClose: () => void;
 }
 
 const ResultView: React.FC<ResultViewProps> = ({ onClose }) => {
-  const { resultImage, compliment, styleScore, reset } = useStore();
+  const { resultImage, previewImageUrl, compliment, styleScore, reset } = useStore();
+  const [imageLoaded, setImageLoaded] = React.useState(false);
 
   const handleDownload = () => {
     if (!resultImage) return;
@@ -39,17 +40,60 @@ const ResultView: React.FC<ResultViewProps> = ({ onClose }) => {
         initial={{ opacity: 0, scale: 1.04 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-        style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0 }}
+        style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0c10' }}
       >
-        {resultImage && (
+        {/* Blurred preview placeholder (visible during high-res download) */}
+        {previewImageUrl && !imageLoaded && (
           <img
+            src={previewImageUrl}
+            alt="Loading preview..."
+            style={{
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              filter: 'blur(10px) brightness(0.6)',
+              opacity: 0.8,
+            }}
+          />
+        )}
+
+        {/* Shimmer/Refinement Loader */}
+        {!imageLoaded && (
+          <div style={{
+            position: 'absolute',
+            zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px 16px',
+            borderRadius: 9999,
+            background: 'rgba(15,17,21,0.7)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+            fontSize: 12,
+            fontWeight: 600,
+            color: '#fff',
+          }}>
+            <Loader style={{ width: 14, height: 14, animation: 'spin 1.2s linear infinite', color: '#FF5A5F' }} />
+            <span>Refining details...</span>
+          </div>
+        )}
+
+        {resultImage && (
+          <motion.img
             src={resultImage}
             alt="Try-on result"
+            onLoad={() => setImageLoaded(true)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: imageLoaded ? 1 : 0 }}
+            transition={{ duration: 0.65, ease: 'easeInOut' }}
             style={{
               width: '100%',
               height: '100%',
               objectFit: 'contain',
-              background: '#0a0c10',
+              zIndex: 2,
             }}
           />
         )}

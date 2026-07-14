@@ -38,3 +38,10 @@ export function validateUserImage(buffer: Buffer): void {
     throw new Error('Image must be JPG, PNG, or WebP');
   }
 }
+
+export async function blurImage(inputBuffer: Buffer, blurRadius = 25, quality = 60): Promise<Buffer> {
+  return sharp(inputBuffer)
+    .blur(blurRadius)
+    .jpeg({ quality })
+    .toBuffer();
+}

@@ -3,8 +3,11 @@ import { runTryonPipelineTests } from './tryon-pipeline.test';
 import { runFailureHandlingTests } from './failure-handling.test';
 import { runMonitoringTests } from './monitoring.test';
 import { runShopifyTests } from './shopify.test';
+import { runLeadCaptureTests } from './lead-capture.test';
+import { runOtpTests } from './otp.test';
 import * as fs from 'fs';
 import * as path from 'path';
+import { prisma } from '@trail/db';
 
 async function generateReport(results: any) {
   const reportPath = path.join(__dirname, 'validation_results.md');
@@ -57,6 +60,28 @@ async function runAll() {
   console.log('🚀 Starting Virtual-Trail Production Harness');
   console.log('==========================================');
 
+  // Pre-test cleanup: delete existing test tenants to prevent unique constraint failures
+  const domainsToDelete = [
+    'test-tenant-a.myshopify.com',
+    'test-tenant-b.myshopify.com',
+    'pipeline-test.myshopify.com',
+    'leadcapture-enabled.myshopify.com',
+    'leadcapture-disabled.myshopify.com',
+    'failure-test.myshopify.com',
+    'monitoring-test.myshopify.com',
+    'shopify-oauth-test.myshopify.com'
+  ];
+  try {
+    await prisma.tenant.deleteMany({
+      where: {
+        shopifyDomain: { in: domainsToDelete }
+      }
+    });
+    console.log('🧹 Cleaned up existing test tenants from database.');
+  } catch (err: any) {
+    console.warn('⚠️ Warning: Failed to clean up database before running tests:', err.message);
+  }
+
   let passed = 0;
   let failed = 0;
 
@@ -74,6 +99,12 @@ async function runAll() {
 
   const t5 = await runShopifyTests();
   passed += t5.passed; failed += t5.failed;
+
+  const t6 = await runLeadCaptureTests();
+  passed += t6.passed; failed += t6.failed;
+
+  const t7 = await runOtpTests();
+  passed += t7.passed; failed += t7.failed;
 
   const total = passed + failed;
 

@@ -18,19 +18,20 @@ export async function runTryonPipelineTests() {
 
     // We don't have an endpoint to mock a product creation easily via REST, 
     // but we can test the failure handling for "missing product"
+    // Since product doesn't exist, the JIT auto-provisioning should automatically create it,
+    // and the request should succeed with 201 Created.
     const tryonRes = await apiClient.post('/v1/tryon', {
       tenantId: tenantId,
+      tenantApiKey: tenantRes.data?.apiKey,
       productId: 'mock_prod_123',
-      userImage: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAAAAAAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCABAAEADASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAwT/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAABQAAf/2Q==' // tiny valid 1x1 base64 jpeg
+      userImage: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=' // valid 1x1 transparent PNG base64
     });
 
-    // Since product doesn't exist, it should return 404.
-    // If it returns 404, the API and validations are reachable and functioning.
-    if (tryonRes.status === 404) {
-      logResult('Pipeline API validation (Missing Product)', true);
+    if (tryonRes.status === 201) {
+      logResult('Pipeline API validation (Auto-Provisioning JIT)', true);
       passed++;
     } else {
-      logResult('Pipeline API validation (Missing Product)', false, `Expected 404, got ${tryonRes.status}`);
+      logResult('Pipeline API validation (Auto-Provisioning JIT)', false, `Expected 201, got ${tryonRes.status} - ${JSON.stringify(tryonRes.data)}`);
       failed++;
     }
 

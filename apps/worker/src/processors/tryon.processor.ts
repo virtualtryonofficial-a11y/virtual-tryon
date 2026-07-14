@@ -4,7 +4,7 @@ import pino from 'pino';
 import { TryonJobPayload } from '@trail/queue';
 import { updateTryonRequest, prisma } from '@trail/db';
 import { getSignedReadUrl, upload } from '@trail/storage';
-import { getProvider, generateCompliment, selectBestGarmentImage, applyWatermarkWithMetrics } from '@trail/ai';
+import { getProvider, generateCompliment, selectBestGarmentImage, applyWatermarkWithMetrics, blurImage } from '@trail/ai';
 import { config } from '@trail/config';
 import * as Sentry from '@sentry/node';
 
@@ -210,6 +210,14 @@ export async function processTryOn(job: Job<TryonJobPayload>) {
       () => upload(generatedKey, finalBuffer, 'image/jpeg'),
       { retries: 3, delayMs: 1000, name: 'Cloudflare R2 Upload' }
     );
+
+    // Generate and upload blurred preview image
+    const previewKey = `${tenantId}/previews/${requestId}`;
+    const blurredBuffer = await blurImage(finalBuffer, 25, 60);
+    await withRetry(
+      () => upload(previewKey, blurredBuffer, 'image/jpeg'),
+      { retries: 3, delayMs: 1000, name: 'Cloudflare R2 Preview Upload' }
+    );
     const uploadMs = Date.now() - uploadStart;
 
     // STEP 6: Call Gemini Flash with local retries if cache miss
@@ -231,6 +239,7 @@ export async function processTryOn(job: Job<TryonJobPayload>) {
     await updateTryonRequest(requestId, {
       status: 'completed',
       generatedImageKey: generatedKey,
+      previewImageKey: previewKey,
       compliment: complimentResult!.compliment,
       styleScore: complimentResult!.score,
       processingTimeMs: elapsed,

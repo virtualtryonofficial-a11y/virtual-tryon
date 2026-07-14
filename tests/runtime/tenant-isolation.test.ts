@@ -30,21 +30,19 @@ export async function runTenantIsolationTests() {
     passed++;
 
     // 2. Validate Configs Isolated
-    const configA = await apiClient.get(`/v1/tenant/${tenantA}/config`);
-    const configB = await apiClient.get(`/v1/tenant/${tenantB}/config`);
+    const configA = await apiClient.get(`/v1/tenant/${tenantA}/config?tenantId=${tenantA}&tenantApiKey=${resA.data.apiKey}`);
+    const configB = await apiClient.get(`/v1/tenant/${tenantB}/config?tenantId=${tenantB}&tenantApiKey=${resB.data.apiKey}`);
     
     if (configA.status === 200 && configB.status === 200) {
       logResult('Configs Isolated', true);
       passed++;
     } else {
-      logResult('Configs Isolated', false);
+      logResult('Configs Isolated', false, `A: ${configA.status}, B: ${configB.status}`);
       failed++;
     }
 
     // 3. Request Isolation (Attempt cross-tenant)
-    const tryonRes = await apiClient.get(`/v1/tryon/invalid-job-id`, {
-      headers: { 'x-tenant-id': tenantA }
-    });
+    const tryonRes = await apiClient.get(`/v1/tryon/invalid-job-id?tenantId=${tenantA}&tenantApiKey=${resA.data.apiKey}`);
     // This should fail with 404 (not found) instead of returning another tenant's data
     if (tryonRes.status === 404) {
       logResult('Requests Isolated', true);

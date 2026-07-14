@@ -6,7 +6,7 @@ const POLL_INTERVAL_MS = 3000;
 const MAX_ATTEMPTS = 40;
 
 const usePolling = (tenantId: string, jobId: string | null) => {
-  const { setResult, setError, setStatus } = useStore();
+  const { setResult, setError, setStatus, setAwaitingLead } = useStore();
   const attemptsRef = useRef(0);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -25,7 +25,15 @@ const usePolling = (tenantId: string, jobId: string | null) => {
 
         const data = await getTryOnStatus(tenantId, jobId);
 
-        if (data.status === 'completed') {
+        if (data.status === 'awaiting_lead') {
+          setAwaitingLead({
+            previewImageUrl: data.previewImageUrl || data.previewImage || '',
+            unlockToken: data.unlockToken || '',
+          });
+          return;
+        }
+
+        if (data.status === 'unlocked' || data.status === 'completed') {
           setResult({
             image: data.imageUrl,
             compliment: data.compliment,
@@ -54,7 +62,7 @@ const usePolling = (tenantId: string, jobId: string | null) => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [jobId, tenantId, setResult, setError, setStatus]);
+  }, [jobId, tenantId, setResult, setError, setStatus, setAwaitingLead]);
 };
 
 export default usePolling;

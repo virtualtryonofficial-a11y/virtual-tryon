@@ -181,6 +181,22 @@ export class TryonService {
   }
 
   async getStatus(jobId: string, tenantId: string): Promise<TryonStatusResponse> {
+    // Resolve tenant config to check if Lead Capture is enabled
+    const tenantConfig = await resolveTenantConfig(tenantId);
+    const leadCaptureEnabled = tenantConfig?.leadCaptureEnabled === true;
+
+    if (leadCaptureEnabled) {
+      const lead = await getLeadByTryonRequestId(jobId);
+      if (!lead) {
+        // Lead capture required, bypass full response cache and fetch from DB to return preview
+        const record = await getTryonRequest(jobId);
+        if (!record || record.tenantId !== tenantId) {
+          throw new NotFoundException(`Job ${jobId} not found`);
+        }
+        return this.mapToResponse(record);
+      }
+    }
+
     // 1. Check full response cache first (fully eliminates database reads during widget polling)
     const responseCacheKey = `tryon:${jobId}:response`;
     const cachedResponse = await this.redis.get(responseCacheKey);
@@ -242,13 +258,19 @@ export class TryonService {
       const lead = await getLeadByTryonRequestId(record.id);
       if (!lead) {
         this.logger.debug(`[Lead Capture Required] Job ${record.id} completed, awaiting contact submission`);
-        const previewImage = await getSignedReadUrl(record.generatedImageKey);
+        const previewKey = record.previewImageKey || record.generatedImageKey;
+        const previewImageUrl = await getSignedReadUrl(previewKey);
         const unlockToken = await this.leadService.generateUnlockToken(record.tenantId, record.id);
+        const expiresAt = new Date(Date.now() + 600 * 1000).toISOString(); // 10-minute expiry
         return {
-          status: record.status,
+          status: 'awaiting_lead',
           requiresLeadCapture: true,
-          previewImage,
+          previewImageUrl,
+          previewImage: previewImageUrl,
+          unlockRequired: true,
           unlockToken,
+          expiresAt,
+          compliment: record.compliment ?? undefined,
         };
       }
     }
@@ -259,7 +281,7 @@ export class TryonService {
     }
 
     return {
-      status: record.status,
+      status: 'unlocked',
       requiresLeadCapture: false,
       imageUrl,
       compliment: record.compliment,

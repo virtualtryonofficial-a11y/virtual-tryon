@@ -33,9 +33,12 @@ export interface TryonResponse {
 export interface TryonStatusResponse {
   status: string;
   imageUrl?: string;
-  previewImage?: string;
+  previewImage?: string; // keep for backward compatibility
+  previewImageUrl?: string;
   requiresLeadCapture?: boolean;
+  unlockRequired?: boolean;
   unlockToken?: string;
+  expiresAt?: string;
   compliment?: string;
   styleScore?: number;
   complimentCached?: boolean;

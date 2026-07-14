@@ -41,6 +41,7 @@ model TenantConfig {
   watermarkRotation Float    @default(-30)
   watermarkSpacing  Int      @default(345)
   leadCaptureEnabled Boolean @default(false)
+  leadCaptureConfig  Json?
   updatedAt         DateTime @updatedAt
 }
 
@@ -69,6 +70,7 @@ model TryonRequest {
   status            String    @default("queued")  // queued | processing | completed | failed
   userImageKey      String?   // R2 key — deleted after 24h by cleanup processor
   generatedImageKey String?   // R2 key — deleted after 7 days by cleanup processor
+  previewImageKey   String?   // R2 key — deleted after 7 days by cleanup processor
   compliment        String?
   styleScore        Float?
   errorMessage      String?
@@ -95,6 +97,7 @@ model Lead {
   lastCampaignAt     DateTime?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
+  metadata           Json?
 
   @@unique([tenantId, tryonRequestId])
   @@index([tenantId, createdAt])
@@ -112,3 +115,30 @@ model AuditLog {
   metadata  Json
   createdAt DateTime @default(now())
 }
+
+model OtpSession {
+  id                   String    @id @default(uuid())
+  tenantId             String
+  tryonRequestId       String    @unique
+  customerName         String
+  countryCode          String
+  phoneNumber          String
+  hashedOtp            String
+  expiresAt            DateTime
+  resendCount          Int       @default(0)
+  verificationAttempts Int       @default(0)
+  status               String    @default("PENDING") // PENDING | SENT | VERIFIED | EXPIRED | FAILED | LOCKED
+  lastSentAt           DateTime?
+  verifiedAt           DateTime?
+  provider             String?
+  providerMessageId    String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  metadata             Json?
+  marketingConsent     Boolean   @default(false)
+
+  @@index([tenantId, id])
+  @@index([tenantId, tryonRequestId])
+  @@index([tenantId, countryCode, phoneNumber])
+}
+

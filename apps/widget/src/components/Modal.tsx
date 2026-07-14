@@ -7,6 +7,7 @@ import CameraTab from './CameraTab';
 import ProcessingView from './ProcessingView';
 import ResultView from './ResultView';
 import ErrorToast from './ErrorToast';
+import LeadFormView from './LeadFormView';
 
 interface ModalProps {
   onClose: () => void;
@@ -185,6 +186,9 @@ const Modal: React.FC<ModalProps> = ({ onClose, productId, tenantId }) => {
       case 'queued':
       case 'polling':
         return <ProcessingView />;
+      case 'awaiting_lead':
+      case 'unlocking':
+        return <LeadFormView />;
       case 'completed':
         return <ResultView onClose={handleClose} />;
       case 'failed':
