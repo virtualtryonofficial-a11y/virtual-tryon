@@ -69,8 +69,8 @@ export class OtpService {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${this.vhApiKey}`,
-        'x-timestamp': timestamp,
-        'x-signature': signature
+        'x-vh-timestamp': timestamp,
+        'x-vh-signature': signature
       },
       body: bodyStr
     });
