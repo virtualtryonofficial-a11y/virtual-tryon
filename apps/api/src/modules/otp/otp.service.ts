@@ -56,7 +56,7 @@ export class OtpService {
   private async callVerificationHub(endpoint: string, payload: any) {
     const url = `${this.vhUrl}${endpoint}`;
     const bodyStr = JSON.stringify(payload);
-    const timestamp = Date.now().toString();
+    const timestamp = new Date().toISOString();
 
     const payloadToSign = `${timestamp}.POST.${endpoint}.${bodyStr}`;
     const signature = crypto
@@ -127,7 +127,7 @@ export class OtpService {
     let vhRes;
     try {
       vhRes = await this.callVerificationHub('/api/v1/verifications', {
-        identifier,
+        destination: identifier,
         channel: 'WHATSAPP'
       });
     } catch (err: any) {
@@ -215,7 +215,7 @@ export class OtpService {
     let vhRes;
     try {
       vhRes = await this.callVerificationHub('/api/v1/verifications', {
-        identifier,
+        destination: identifier,
         channel: 'WHATSAPP'
       });
     } catch (err: any) {
