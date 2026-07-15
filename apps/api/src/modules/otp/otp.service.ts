@@ -55,14 +55,24 @@ export class OtpService {
 
   private async callVerificationHub(endpoint: string, payload: any) {
     const url = `${this.vhUrl}${endpoint}`;
+    const bodyStr = JSON.stringify(payload);
+    const timestamp = Date.now().toString();
+
+    const payloadToSign = `${timestamp}.POST.${endpoint}.${bodyStr}`;
+    const signature = crypto
+      .createHmac('sha256', this.vhApiKey)
+      .update(payloadToSign)
+      .digest('hex');
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-account-id': this.vhAccountId,
-        'x-api-key': this.vhApiKey,
+        'Authorization': `Bearer ${this.vhApiKey}`,
+        'x-timestamp': timestamp,
+        'x-signature': signature
       },
-      body: JSON.stringify(payload)
+      body: bodyStr
     });
     
     if (!response.ok) {
