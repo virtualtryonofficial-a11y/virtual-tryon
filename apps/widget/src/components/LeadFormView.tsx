@@ -70,12 +70,83 @@ const LeadFormView: React.FC = () => {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // ── Analytics ─────────────────────────────────────────────────────────────
+  // ── Auto Submit & Analytics ─────────────────────────────────────────────
+  const hasAutoSubmitted = useRef(false);
+
   useEffect(() => {
     if (status === 'awaiting_lead') {
-      trackEvent('lead_form_opened', { jobId });
+      const autoSubmit = async () => {
+        if (hasAutoSubmitted.current) return;
+        
+        const stored = localStorage.getItem('vt_lead_verified');
+        if (stored) {
+          try {
+            const data = JSON.parse(stored);
+            const isWithin24h = Date.now() - data.verifiedAt < 24 * 60 * 60 * 1000;
+            if (isWithin24h && jobId && unlockToken) {
+              hasAutoSubmitted.current = true;
+              setStatus('sending_otp');
+              
+              const metadata: Record<string, string> = {};
+              fields.forEach((field) => {
+                if (field.id !== 'name' && field.id !== 'phone') {
+                  metadata[field.id] = data.metadata?.[field.id] || '';
+                }
+              });
+
+              const leadRes = await submitLead(
+                jobId,
+                data.name,
+                data.phone,
+                data.countryCode,
+                true,
+                metadata
+              );
+
+              if (leadRes?.otpRequired) {
+                setOtpSession({
+                  otpSessionId: leadRes.otpSessionId,
+                  expiresAt: leadRes.expiresAt,
+                  resendAfter: leadRes.resendAfter,
+                  maskedPhone: leadRes.maskedPhone,
+                });
+                return;
+              }
+
+              setStatus('unlocking');
+              const unlockRes = await unlockTryOn(leadRes?.unlockToken || unlockToken);
+              setResult({
+                image: unlockRes.imageUrl,
+                compliment: unlockRes.compliment || 'Your style fits perfectly!',
+                score: unlockRes.styleScore || 9.0,
+              });
+              return;
+            } else {
+               localStorage.removeItem('vt_lead_verified');
+            }
+          } catch (err) {
+            console.error('Auto-submit failed', err);
+            setStatus('awaiting_lead');
+          }
+        }
+        trackEvent('lead_form_opened', { jobId });
+      };
+
+      autoSubmit();
     }
-  }, [jobId, status]);
+  }, [jobId, status, fields, unlockToken, setOtpSession, setResult, setStatus]);
+
+  const saveVerifiedState = () => {
+    const cleanPhone = phone.replace(/[\s\-()]/g, '');
+    const verifiedData = {
+      phone: cleanPhone,
+      name: formValues['name'] || '',
+      countryCode: selectedCountry.dial,
+      metadata: formValues,
+      verifiedAt: Date.now()
+    };
+    localStorage.setItem('vt_lead_verified', JSON.stringify(verifiedData));
+  };
 
   // ── OTP Resend Cooldown Countdown ─────────────────────────────────────────
   useEffect(() => {
@@ -183,6 +254,7 @@ const LeadFormView: React.FC = () => {
         });
       } else {
         // Direct unlock if OTP not required
+        saveVerifiedState();
         setStatus('unlocking');
         trackEvent('unlock_started', { jobId });
         const unlockRes = await unlockTryOn(leadRes?.unlockToken || unlockToken);
@@ -246,6 +318,7 @@ const LeadFormView: React.FC = () => {
       const verifyRes = await verifyOtp(otpSessionId, otpCode.trim());
       
       // Successfully verified, update status to unlocking and resolve original image
+      saveVerifiedState();
       setStatus('unlocking');
       trackEvent('unlock_started', { jobId });
       

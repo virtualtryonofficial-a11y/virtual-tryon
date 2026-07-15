@@ -8,6 +8,7 @@ import {
   getLeadsForTenant,
   getTryonRequest,
   createAuditLog,
+  getLeadByPhone,
 } from '@trail/db';
 import { getSignedReadUrl } from '@trail/storage';
 import { resolveTenantConfig } from '@trail/tenant';
@@ -129,19 +130,32 @@ export class LeadService {
 
     // OTP Gating check
     const otpConfig = tenantConfig.leadCapture?.otpVerification;
+    let bypassOtp = false;
+
     if (otpConfig?.enabled === true) {
-      if (!this.otpService) {
-        throw new Error('OtpService is not initialized');
+      if (dto.phoneNumber) {
+        const cleanPhone = dto.phoneNumber.replace(/[\s\-()]/g, '');
+        const recentLead = await getLeadByPhone(tenantId, dto.countryCode || '', cleanPhone);
+        if (recentLead && (Date.now() - recentLead.createdAt.getTime()) <= 24 * 60 * 60 * 1000) {
+          this.logger.debug(`[OTP Bypass] Skipping OTP for recently verified phone: ${cleanPhone}`);
+          bypassOtp = true;
+        }
       }
-      return this.otpService.createOrUpdateSession(
-        tenantId,
-        tryon.id,
-        dto.customerName || '',
-        dto.countryCode || '',
-        dto.phoneNumber || '',
-        dto.marketingConsent || false,
-        dto.metadata
-      ) as any;
+
+      if (!bypassOtp) {
+        if (!this.otpService) {
+          throw new Error('OtpService is not initialized');
+        }
+        return this.otpService.createOrUpdateSession(
+          tenantId,
+          tryon.id,
+          dto.customerName || '',
+          dto.countryCode || '',
+          dto.phoneNumber || '',
+          dto.marketingConsent || false,
+          dto.metadata
+        ) as any;
+      }
     }
 
     // 4. Idempotency Check — if lead already captured for this specific tryonRequestId, return immediately
