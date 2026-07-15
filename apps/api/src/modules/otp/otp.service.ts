@@ -134,7 +134,7 @@ export class OtpService {
       throw new BadRequestException('Failed to generate verification code. Please try again.');
     }
 
-    const verificationId = vhRes.id;
+    const verificationId = vhRes.data.id;
 
     if (session) {
       session = await this.otpRepository.updateSession(session.id, {
@@ -222,7 +222,7 @@ export class OtpService {
       throw new BadRequestException('Failed to generate verification code. Please try again.');
     }
     
-    const verificationId = vhRes.id;
+    const verificationId = vhRes.data.id;
     const expiresAt = new Date(now.getTime() + otpConfig.expirySeconds * 1000);
 
     await this.otpRepository.updateSession(session.id, {
@@ -278,7 +278,7 @@ export class OtpService {
 
     let vhRes;
     try {
-      vhRes = await this.callVerificationHub(`/api/v1/verifications/${session.providerMessageId}/verify`, {
+      vhRes = await this.callVerificationHub(`/api/v1/verifications/${session.providerMessageId}/validate`, {
         code: otp
       });
     } catch (err: any) {
@@ -295,7 +295,7 @@ export class OtpService {
       throw new BadRequestException('Invalid verification code. Please try again.');
     }
 
-    if (vhRes.status !== 'COMPLETED') {
+    if (vhRes.data.status !== 'VERIFIED' && vhRes.data.status !== 'COMPLETED') {
       const attempts = session.verificationAttempts + 1;
       await this.otpRepository.updateSession(session.id, { verificationAttempts: attempts });
       throw new BadRequestException('Invalid verification code. Please try again.');
