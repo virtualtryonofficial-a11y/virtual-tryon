@@ -42,22 +42,35 @@ function maskPhoneNumber(countryCode: string, phoneNumber: string, maskEnabled =
 export class OtpService {
   private readonly logger = new Logger(OtpService.name);
   private readonly redis: Redis;
-  private readonly provider: OtpProvider;
+  private readonly vhUrl: string;
+  private readonly vhAccountId: string;
+  private readonly vhApiKey: string;
 
   constructor(private readonly otpRepository: OtpRepository) {
     this.redis = new Redis(appConfig.redis.url, { maxRetriesPerRequest: null });
-    // Bind mock provider for AGENT_TASK_022
-    this.provider = new MockOtpProvider();
+    this.vhUrl = process.env.VERIFICATION_HUB_API_URL || 'https://verification-hub-api.onrender.com';
+    this.vhAccountId = process.env.VERIFICATION_HUB_ACCOUNT_ID || '';
+    this.vhApiKey = process.env.VERIFICATION_HUB_API_KEY || '';
   }
 
-  private generateNumericOtp(length: number): string {
-    const chars = '0123456789';
-    let otp = '';
-    for (let i = 0; i < length; i++) {
-      const idx = crypto.randomInt(0, chars.length);
-      otp += chars[idx];
+  private async callVerificationHub(endpoint: string, payload: any) {
+    const url = `${this.vhUrl}${endpoint}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-account-id': this.vhAccountId,
+        'x-api-key': this.vhApiKey,
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      this.logger.error(`Verification Hub Error: ${response.status} ${errorText}`);
+      throw new BadRequestException('Verification service error. Please try again.');
     }
-    return otp;
+    return response.json();
   }
 
   async createOrUpdateSession(
@@ -72,7 +85,6 @@ export class OtpService {
     const tenantConfig = await resolveTenantConfig(tenantId);
     const otpConfig = tenantConfig.leadCapture.otpVerification;
     
-    // Idempotency: check if lead already exists
     const existingLead = await getLeadByTryonRequestId(tryonRequestId);
     if (existingLead) {
       const unlockToken = generateUnlockToken(tenantId, tryonRequestId, appConfig.jwt.secret);
@@ -83,15 +95,11 @@ export class OtpService {
       };
     }
 
-    const otp = this.generateNumericOtp(otpConfig.otpLength);
-    const hashedOtp = await bcrypt.hash(otp, 10);
     const now = new Date();
     const expiresAt = new Date(now.getTime() + otpConfig.expirySeconds * 1000);
-
     let session = await this.otpRepository.getSessionByTryon(tryonRequestId);
 
     if (session) {
-      // Cooldown check
       if (session.lastSentAt) {
         const diffSeconds = Math.floor((now.getTime() - session.lastSentAt.getTime()) / 1000);
         if (diffSeconds < otpConfig.resendCooldown) {
@@ -99,24 +107,40 @@ export class OtpService {
           throw new BadRequestException(`Please wait ${waitTime}s before requesting a new code.`);
         }
       }
-
-      // Check resend limits
       if (session.resendCount >= otpConfig.maxResends) {
         throw new BadRequestException('Maximum resend attempts reached.');
       }
+    }
 
+    const identifier = countryCode.startsWith('+') ? `${countryCode}${phoneNumber}` : `+${countryCode}${phoneNumber}`;
+    
+    let vhRes;
+    try {
+      vhRes = await this.callVerificationHub('/api/v1/verifications', {
+        identifier,
+        channel: 'WHATSAPP'
+      });
+    } catch (err: any) {
+      throw new BadRequestException('Failed to generate verification code. Please try again.');
+    }
+
+    const verificationId = vhRes.id;
+
+    if (session) {
       session = await this.otpRepository.updateSession(session.id, {
         customerName,
         countryCode,
         phoneNumber,
-        hashedOtp,
+        hashedOtp: 'managed-by-verification-hub',
         expiresAt,
-        status: 'PENDING',
+        status: 'SENT',
         resendCount: session.resendCount + 1,
         verificationAttempts: 0,
         lastSentAt: now,
         marketingConsent,
         metadata: metadata || {},
+        providerMessageId: verificationId,
+        provider: 'verification-hub'
       });
     } else {
       session = await this.otpRepository.createSession({
@@ -125,50 +149,24 @@ export class OtpService {
         customerName,
         countryCode,
         phoneNumber,
-        hashedOtp,
+        hashedOtp: 'managed-by-verification-hub',
         expiresAt,
-        status: 'PENDING',
+        status: 'SENT',
         resendCount: 0,
         verificationAttempts: 0,
         lastSentAt: now,
         marketingConsent,
         metadata: metadata || {},
+        providerMessageId: verificationId,
+        provider: 'verification-hub'
       });
     }
 
     await createAuditLog({
       tenantId,
-      action: 'otp_requested',
-      actor: 'widget',
-      metadata: { tryonRequestId, sessionId: session.id },
-    }).catch(() => {});
-
-    if (process.env.NODE_ENV !== 'production') {
-      this.logger.log(`[TESTING] Saving OTP ${otp} to Redis key test:otp:${session.id}`);
-      await this.redis.set(`test:otp:${session.id}`, otp, 'EX', 600);
-    }
-
-    // Send OTP
-    const providerResponse: OtpProviderResponse = await this.provider.sendOtp(
-      phoneNumber,
-      countryCode,
-      otp,
-      tenantConfig.name,
-      tenantConfig.name, // brandName fallback
-      tenantConfig.logoUrl || undefined
-    );
-
-    session = await this.otpRepository.updateSession(session.id, {
-      status: 'SENT',
-      provider: providerResponse.provider,
-      providerMessageId: providerResponse.otpId,
-    });
-
-    await createAuditLog({
-      tenantId,
       action: 'otp_sent',
       actor: 'widget',
-      metadata: { tryonRequestId, sessionId: session.id, provider: providerResponse.provider },
+      metadata: { tryonRequestId, sessionId: session.id, provider: 'verification-hub' },
     }).catch(() => {});
 
     return {
@@ -189,12 +187,10 @@ export class OtpService {
     const tenantConfig = await resolveTenantConfig(tenantId);
     const otpConfig = tenantConfig.leadCapture.otpVerification;
 
-    // Check resend limits
     if (session.resendCount >= otpConfig.maxResends) {
       throw new BadRequestException('Maximum resend attempts reached.');
     }
 
-    // Cooldown check
     const now = new Date();
     if (session.lastSentAt) {
       const diffSeconds = Math.floor((now.getTime() - session.lastSentAt.getTime()) / 1000);
@@ -204,17 +200,28 @@ export class OtpService {
       }
     }
 
-    const otp = this.generateNumericOtp(otpConfig.otpLength);
-    const hashedOtp = await bcrypt.hash(otp, 10);
+    const identifier = session.countryCode.startsWith('+') ? `${session.countryCode}${session.phoneNumber}` : `+${session.countryCode}${session.phoneNumber}`;
+    
+    let vhRes;
+    try {
+      vhRes = await this.callVerificationHub('/api/v1/verifications', {
+        identifier,
+        channel: 'WHATSAPP'
+      });
+    } catch (err: any) {
+      throw new BadRequestException('Failed to generate verification code. Please try again.');
+    }
+    
+    const verificationId = vhRes.id;
     const expiresAt = new Date(now.getTime() + otpConfig.expirySeconds * 1000);
 
     await this.otpRepository.updateSession(session.id, {
-      hashedOtp,
       expiresAt,
-      status: 'PENDING',
+      status: 'SENT',
       resendCount: session.resendCount + 1,
       verificationAttempts: 0,
       lastSentAt: now,
+      providerMessageId: verificationId
     });
 
     await createAuditLog({
@@ -224,32 +231,11 @@ export class OtpService {
       metadata: { tryonRequestId: session.tryonRequestId, sessionId: session.id },
     }).catch(() => {});
 
-    if (process.env.NODE_ENV !== 'production') {
-      this.logger.log(`[TESTING] Saving OTP ${otp} to Redis key test:otp:${session.id}`);
-      await this.redis.set(`test:otp:${session.id}`, otp, 'EX', 600);
-    }
-
-    // Send OTP
-    const providerResponse = await this.provider.sendOtp(
-      session.phoneNumber,
-      session.countryCode,
-      otp,
-      tenantConfig.name,
-      tenantConfig.name,
-      tenantConfig.logoUrl || undefined
-    );
-
-    await this.otpRepository.updateSession(session.id, {
-      status: 'SENT',
-      provider: providerResponse.provider,
-      providerMessageId: providerResponse.otpId,
-    });
-
     await createAuditLog({
       tenantId,
       action: 'otp_sent',
       actor: 'widget',
-      metadata: { tryonRequestId: session.tryonRequestId, sessionId: session.id, provider: providerResponse.provider },
+      metadata: { tryonRequestId: session.tryonRequestId, sessionId: session.id, provider: 'verification-hub' },
     }).catch(() => {});
 
     return {
@@ -267,59 +253,44 @@ export class OtpService {
 
     const tenantConfig = await resolveTenantConfig(tenantId);
     const otpConfig = tenantConfig.leadCapture.otpVerification;
-
-    // Check expiration
     const now = new Date();
+
     if (now.getTime() > session.expiresAt.getTime()) {
       await this.otpRepository.updateSession(session.id, { status: 'EXPIRED' });
-      await createAuditLog({
-        tenantId,
-        action: 'otp_expired',
-        actor: 'widget',
-        metadata: { tryonRequestId: session.tryonRequestId, sessionId: session.id },
-      }).catch(() => {});
       throw new BadRequestException('Verification code expired. Please request a new code.');
     }
 
-    // Check max attempts
     if (session.verificationAttempts >= otpConfig.maxAttempts) {
       await this.otpRepository.updateSession(session.id, { status: 'LOCKED' });
       await this.otpRepository.deleteSession(session.id).catch(() => {});
-      await createAuditLog({
-        tenantId,
-        action: 'otp_failed',
-        actor: 'widget',
-        metadata: { tryonRequestId: session.tryonRequestId, sessionId: session.id, error: 'max_attempts_exceeded' },
-      }).catch(() => {});
       throw new BadRequestException('Maximum verification attempts reached. Please restart.');
     }
 
-    // Verify OTP using bcrypt
-    const isOtpValid = await bcrypt.compare(otp, session.hashedOtp);
-
-    if (!isOtpValid) {
+    let vhRes;
+    try {
+      vhRes = await this.callVerificationHub(`/api/v1/verifications/${session.providerMessageId}/verify`, {
+        code: otp
+      });
+    } catch (err: any) {
       const attempts = session.verificationAttempts + 1;
       await this.otpRepository.updateSession(session.id, {
         verificationAttempts: attempts,
       });
-
-      await createAuditLog({
-        tenantId,
-        action: 'otp_failed',
-        actor: 'widget',
-        metadata: { tryonRequestId: session.tryonRequestId, sessionId: session.id, attempt: attempts },
-      }).catch(() => {});
 
       if (attempts >= otpConfig.maxAttempts) {
         await this.otpRepository.updateSession(session.id, { status: 'LOCKED' });
         await this.otpRepository.deleteSession(session.id).catch(() => {});
         throw new BadRequestException('Maximum verification attempts reached. Please restart.');
       }
-
       throw new BadRequestException('Invalid verification code. Please try again.');
     }
 
-    // Successful OTP Verification
+    if (vhRes.status !== 'COMPLETED') {
+      const attempts = session.verificationAttempts + 1;
+      await this.otpRepository.updateSession(session.id, { verificationAttempts: attempts });
+      throw new BadRequestException('Invalid verification code. Please try again.');
+    }
+
     await this.otpRepository.updateSession(session.id, {
       status: 'VERIFIED',
       verifiedAt: now,
@@ -332,7 +303,6 @@ export class OtpService {
       metadata: { tryonRequestId: session.tryonRequestId, sessionId: session.id },
     }).catch(() => {});
 
-    // Create lead record
     const newLead = await createLead({
       tenantId,
       tryonRequestId: session.tryonRequestId,
@@ -352,10 +322,7 @@ export class OtpService {
       metadata: { leadId: newLead.id, tryonRequestId: session.tryonRequestId },
     }).catch(() => {});
 
-    // Clean up temporary session record
     await this.otpRepository.deleteSession(session.id).catch(() => {});
-
-    // Clear cached status response
     await this.redis.del(`tryon:${session.tryonRequestId}:response`);
 
     const unlockToken = generateUnlockToken(tenantId, session.tryonRequestId, appConfig.jwt.secret);
