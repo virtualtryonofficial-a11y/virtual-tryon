@@ -35,6 +35,7 @@ const LeadFormView: React.FC = () => {
     resendAfter,
     setOtpSession,
     setResult,
+    tenantId,
   } = useStore();
 
   // ── Retrieve dynamic configuration and copy ──────────────────────────────
