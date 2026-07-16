@@ -371,20 +371,20 @@ export class AdminController {
           for (const customer of customersRes) {
             for (const session of customer.sessions) {
               if (session.isActive) {
-                customersHtml += `
+                customersHtml += \`
                   <tr class="hover:bg-white/5 transition-colors border-b border-white/5">
-                    <td class="py-4 pl-2 font-medium text-slate-200">${customer.tenant.name}</td>
-                    <td class="py-4 font-medium text-slate-200">+${customer.countryCode} ${customer.phone}</td>
+                    <td class="py-4 pl-2 font-medium text-slate-200">\${customer.tenant.name}</td>
+                    <td class="py-4 font-medium text-slate-200">+\${customer.countryCode} \${customer.phone}</td>
                     <td class="py-4 text-slate-400">Trusted Browser</td>
-                    <td class="py-4 text-slate-400">${new Date(session.lastSeenAt).toLocaleString()}</td>
-                    <td class="py-4 text-slate-400">${session.expiresAt ? new Date(session.expiresAt).toLocaleDateString() : 'N/A'}</td>
+                    <td class="py-4 text-slate-400">\${new Date(session.lastSeenAt).toLocaleString()}</td>
+                    <td class="py-4 text-slate-400">\${session.expiresAt ? new Date(session.expiresAt).toLocaleDateString() : 'N/A'}</td>
                     <td class="py-4 pr-2 text-right">
-                      <button onclick="revokeSession('${session.id}')" class="px-3 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors">
+                      <button onclick="revokeSession('\${session.id}')" class="px-3 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors">
                         Revoke
                       </button>
                     </td>
                   </tr>
-                `;
+                \`;
               }
             }
           }
