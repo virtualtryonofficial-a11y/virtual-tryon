@@ -108,6 +108,7 @@ const ResultView: React.FC<ResultViewProps> = ({ onClose }) => {
               position: 'absolute',
               top: 14,
               left: 14,
+              zIndex: 10,
               display: 'flex',
               alignItems: 'center',
               gap: 6,
