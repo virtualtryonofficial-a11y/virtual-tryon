@@ -20,6 +20,7 @@ model Tenant {
   products      Product[]
   tryonRequests TryonRequest[]
   leads         Lead[]
+  customers     Customer[]
 }
 
 model TenantConfig {
@@ -87,6 +88,8 @@ model Lead {
   tenant             Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   tryonRequestId     String       @unique
   tryonRequest       TryonRequest @relation(fields: [tryonRequestId], references: [id], onDelete: Cascade)
+  customerId         String?
+  customer           Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
   customerName       String
   phoneNumber        String
   countryCode        String
@@ -142,3 +145,39 @@ model OtpSession {
   @@index([tenantId, countryCode, phoneNumber])
 }
 
+model Customer {
+  id                   String   @id @default(uuid())
+  tenantId             String
+  phone                String
+  countryCode          String
+  preferredLanguage    String?  // e.g. 'en', 'ta'
+  
+  createdAt            DateTime @default(now())
+  lastSeenAt           DateTime @default(now())
+  lastDeviceName       String?  // Rolled up from active sessions
+  
+  tenant               Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sessions             CustomerSession[]
+  leads                Lead[]
+  
+  @@unique([tenantId, countryCode, phone])
+}
+
+model CustomerSession {
+  id               String    @id @default(uuid())
+  customerId       String
+  sessionTokenHash String    @unique
+  sessionVersion   Int       @default(1) // For sweeping invalidations/rotation
+  
+  deviceName       String?
+  lastIp           String?
+  lastUserAgent    String?
+  isActive         Boolean   @default(true)
+  
+  createdAt        DateTime  @default(now())
+  lastSeenAt       DateTime  @default(now())
+  revokedAt        DateTime?
+  expiresAt        DateTime?
+  
+  customer         Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}

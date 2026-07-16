@@ -36,10 +36,10 @@ export class TryonService {
   }
 
 
-  async create(dto: CreateTryonDto, requestId: string): Promise<{ jobId: string }> {
+  async create(dto: CreateTryonDto, requestId: string, sessionToken?: string): Promise<{ jobId: string }> {
+    const crypto = require('crypto');
     // 0. Verify cryptographic request signature if provided (secures API from public automated scrape vectors)
     if (dto.signature) {
-      const crypto = require('crypto');
       const tenant = await resolveTenantConfig(dto.tenantId);
       
       const message = `${dto.tenantId}:${dto.productId}:${dto.timestamp || ''}`;
@@ -143,6 +143,32 @@ export class TryonService {
       productId: product.id,
       status: 'queued',
     });
+
+    if (sessionToken) {
+      const sessionTokenHash = crypto.createHash('sha256').update(sessionToken).digest('hex');
+      const customerSession = await prisma.customerSession.findFirst({
+        where: { sessionTokenHash, isActive: true, customer: { tenantId: dto.tenantId } },
+        include: { customer: true }
+      });
+      if (customerSession) {
+        // Automatically bypass OTP by creating a lead linked to this trusted customer
+        await prisma.lead.create({
+          data: {
+            tenantId: dto.tenantId,
+            tryonRequestId: requestId,
+            customerId: customerSession.customerId,
+            customerName: '', // Could be filled from customer profile in future
+            phoneNumber: customerSession.customer.phone,
+            countryCode: customerSession.customer.countryCode,
+            status: 'NEW',
+          }
+        });
+        
+        // Update lastSeenAt
+        await prisma.customerSession.update({ where: { id: customerSession.id }, data: { lastSeenAt: new Date() } });
+        await prisma.customer.update({ where: { id: customerSession.customerId }, data: { lastSeenAt: new Date() } });
+      }
+    }
 
     // 5. Upload to R2
     const userImageKey = `${dto.tenantId}/uploads/${requestId}`;

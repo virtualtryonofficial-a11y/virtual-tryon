@@ -18,6 +18,7 @@ interface WidgetState {
   error: string | null;
   tenantId: string | null;
   productId: string | null;
+  isTrusted: boolean;
   config: {
     primaryColor: string;
     complimentTone: string;
@@ -60,6 +61,7 @@ interface WidgetState {
   setConfig: (config: WidgetState['config']) => void;
   setRuntimeConfig: (config: Partial<WidgetState['runtimeConfig']>) => void;
   setIdentifiers: (data: { tenantId: string; productId: string }) => void;
+  setIsTrusted: (isTrusted: boolean) => void;
   reset: () => void;
 }
 
@@ -79,6 +81,7 @@ export const useStore = create<WidgetState>((set) => ({
   error: null,
   tenantId: null,
   productId: null,
+  isTrusted: false,
   config: null,
   runtimeConfig: {
     apiUrl: '',
@@ -114,6 +117,7 @@ export const useStore = create<WidgetState>((set) => ({
     runtimeConfig: { ...state.runtimeConfig, ...config }
   })),
   setIdentifiers: (data) => set({ tenantId: data.tenantId, productId: data.productId }),
+  setIsTrusted: (isTrusted) => set({ isTrusted }),
   reset: () => set((state) => ({
     status: 'idle',
     jobId: null,

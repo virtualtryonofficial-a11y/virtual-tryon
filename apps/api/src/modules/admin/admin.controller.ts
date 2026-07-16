@@ -9,6 +9,7 @@ import {
   UseGuards,
   Header,
   Req,
+  Delete,
 } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
 import type { Request } from 'express';
@@ -223,6 +224,38 @@ export class AdminController {
         </div>
       </section>
 
+      <!-- Customer Session Management Section -->
+      <section class="glass-card rounded-2xl p-6 mb-8">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="font-outfit font-semibold text-sm tracking-wider uppercase text-slate-400 flex items-center gap-2">
+            <i class="fa-solid fa-users text-purple-400"></i> Customer Session Management
+          </h3>
+        </div>
+        
+        <div class="overflow-x-auto w-full">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="border-b border-white/5 text-slate-500 font-outfit uppercase font-semibold">
+                <th class="pb-3 pl-2">Merchant Name</th>
+                <th class="pb-3">Phone</th>
+                <th class="pb-3">Session Details</th>
+                <th class="pb-3">Last Seen</th>
+                <th class="pb-3">Expires At</th>
+                <th class="pb-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="customers-rows" class="divide-y divide-white/5">
+              <!-- Loading Row -->
+              <tr>
+                <td colspan="6" class="py-8 text-center text-slate-500">
+                  <i class="fa-solid fa-circle-notch animate-spin text-purple-400 text-lg mr-2"></i> Loading customers...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
     </div>
   </main>
 
@@ -328,7 +361,61 @@ export class AdminController {
       }
     }
 
+    async function loadCustomers() {
+      try {
+        const customersRes = await fetch('/admin/customers').then(r => r.json());
+        let customersHtml = '';
+        if (customersRes.length === 0) {
+          customersHtml = '<tr><td colspan="6" class="py-4 text-center text-slate-500 font-medium">No customers found.</td></tr>';
+        } else {
+          for (const customer of customersRes) {
+            for (const session of customer.sessions) {
+              if (session.isActive) {
+                customersHtml += `
+                  <tr class="hover:bg-white/5 transition-colors border-b border-white/5">
+                    <td class="py-4 pl-2 font-medium text-slate-200">${customer.tenant.name}</td>
+                    <td class="py-4 font-medium text-slate-200">+${customer.countryCode} ${customer.phone}</td>
+                    <td class="py-4 text-slate-400">Trusted Browser</td>
+                    <td class="py-4 text-slate-400">${new Date(session.lastSeenAt).toLocaleString()}</td>
+                    <td class="py-4 text-slate-400">${session.expiresAt ? new Date(session.expiresAt).toLocaleDateString() : 'N/A'}</td>
+                    <td class="py-4 pr-2 text-right">
+                      <button onclick="revokeSession('${session.id}')" class="px-3 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors">
+                        Revoke
+                      </button>
+                    </td>
+                  </tr>
+                `;
+              }
+            }
+          }
+          if (!customersHtml) {
+            customersHtml = '<tr><td colspan="6" class="py-4 text-center text-slate-500 font-medium">No active sessions found.</td></tr>';
+          }
+        }
+        document.getElementById('customers-rows').innerHTML = customersHtml;
+      } catch (err) {
+        console.error(err);
+        document.getElementById('customers-rows').innerHTML = '<tr><td colspan="6" class="py-8 text-center text-red-400 font-medium">Failed to load customers. Check console.</td></tr>';
+      }
+    }
+
+    async function revokeSession(sessionId) {
+      if (!confirm('Are you sure you want to revoke this session? The customer will be prompted for OTP on their next visit.')) return;
+      try {
+        const res = await fetch('/admin/sessions/' + sessionId, { method: 'DELETE' });
+        if (res.ok) {
+          loadCustomers(); // reload to reflect changes
+        } else {
+          alert('Failed to revoke session');
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Failed to revoke session');
+      }
+    }
+
     loadDashboard();
+    loadCustomers();
 
     async function handleClearQueues() {
       if (!confirm('Are you sure you want to completely clear and reset all tryon queues? This will delete all pending, retrying, and DLQ jobs.')) {
@@ -463,6 +550,18 @@ export class AdminController {
   @UseGuards(AdminGuard)
   async clearQueues() {
     return this.adminService.clearQueues();
+  }
+
+  @Get('customers')
+  @UseGuards(AdminGuard)
+  async getCustomers(@Query('tenantId') tenantId?: string) {
+    return this.adminService.getCustomers(tenantId);
+  }
+
+  @Delete('sessions/:sessionId')
+  @UseGuards(AdminGuard)
+  async revokeSession(@Param('sessionId') sessionId: string) {
+    return this.adminService.revokeSession(sessionId);
   }
 }
 

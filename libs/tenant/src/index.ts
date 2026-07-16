@@ -38,6 +38,7 @@ export async function resolveTenantConfig(tenantId: string) {
     apiKey: tenant.apiKey,   // Required for TenantGuard authentication
     features: tenant.features,
     leadCaptureEnabled,
+    rememberDurationDays: leadCaptureConfig?.rememberDurationDays || 30,
     leadCapture: {
       enabled: leadCaptureEnabled,
       title: leadCaptureConfig?.title || 'Unlock Your Styling',

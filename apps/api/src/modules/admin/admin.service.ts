@@ -76,6 +76,30 @@ export class AdminService {
     });
   }
 
+  async getCustomers(tenantId?: string) {
+    const where: any = {};
+    if (tenantId) where.tenantId = tenantId;
+
+    return prisma.customer.findMany({
+      where,
+      include: {
+        sessions: {
+          orderBy: { lastSeenAt: 'desc' }
+        },
+        tenant: { select: { name: true } }
+      },
+      orderBy: { lastSeenAt: 'desc' },
+      take: 100,
+    });
+  }
+
+  async revokeSession(sessionId: string) {
+    return prisma.customerSession.update({
+      where: { id: sessionId },
+      data: { isActive: false, revokedAt: new Date() }
+    });
+  }
+
   async getAnalytics() {
     const [tenantsCount, productsCount, requestsCount, statusGroups, successfulRequests] = await Promise.all([
       prisma.tenant.count(),

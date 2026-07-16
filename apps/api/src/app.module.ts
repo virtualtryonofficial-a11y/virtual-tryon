@@ -12,6 +12,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { ShopifyModule } from './modules/shopify/shopify.module';
 import { LeadModule } from './modules/lead/lead.module';
 import { OtpModule } from './modules/otp/otp.module';
+import { CustomerModule } from './modules/customer/customer.module';
 import { RedisThrottlerStorage } from './common/throttler/redis-throttler.storage';
 
 import { Injectable, ExecutionContext } from '@nestjs/common';
@@ -48,6 +49,7 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     TryonModule,
     LeadModule,
     OtpModule,
+    CustomerModule,
     AdminModule,
     ShopifyModule,
   ],

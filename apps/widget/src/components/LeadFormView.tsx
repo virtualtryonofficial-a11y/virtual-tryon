@@ -317,6 +317,10 @@ const LeadFormView: React.FC = () => {
     try {
       const verifyRes = await verifyOtp(otpSessionId, otpCode.trim());
       
+      if (verifyRes.sessionToken) {
+        localStorage.setItem(`vt_trust_token_${tenantId}`, verifyRes.sessionToken);
+      }
+
       // Successfully verified, update status to unlocking and resolve original image
       saveVerifiedState();
       setStatus('unlocking');

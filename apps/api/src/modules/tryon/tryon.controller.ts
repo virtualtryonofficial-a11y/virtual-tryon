@@ -21,7 +21,14 @@ export class TryonController {
     @Req() req: any,
   ): Promise<TryonResponse> {
     const requestId = req.requestId;
-    return this.tryonService.create(dto, requestId);
+    
+    let sessionToken = undefined;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      sessionToken = authHeader.split(' ')[1];
+    }
+    
+    return this.tryonService.create(dto, requestId, sessionToken);
   }
 
   @Get(':jobId')

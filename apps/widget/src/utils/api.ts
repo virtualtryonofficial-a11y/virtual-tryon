@@ -47,9 +47,15 @@ export async function startTryOn(tenantId: string, productId: string, userImage:
     }
   }
 
+  const sessionToken = localStorage.getItem(`vt_trust_token_${tenantId}`);
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (sessionToken) {
+    headers['Authorization'] = `Bearer ${sessionToken}`;
+  }
+
   const response = await fetch(`${runtimeConfig.apiUrl}/v1/tryon`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({
       tenantId,
       productId,
@@ -266,4 +272,29 @@ export async function verifyOtp(otpSessionId: string, otp: string) {
   }
 
   return await response.json();
+}
+
+export async function checkCustomerSession(tenantId: string, token: string) {
+  const { runtimeConfig } = useStore.getState();
+  
+  if (runtimeConfig.useMock) {
+    return { trusted: true, customer: { id: 'mock-id' } };
+  }
+
+  const response = await fetch(
+    `${runtimeConfig.apiUrl}/v1/customer/session`,
+    {
+      method: 'GET',
+      headers: {
+        'x-tenant-id': tenantId,
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('Invalid session');
+  }
+
+  return response.json();
 }

@@ -3,7 +3,7 @@ import { Redis } from 'ioredis';
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { config as appConfig } from '@trail/config';
-import { createLead, createAuditLog, getLeadByTryonRequestId } from '@trail/db';
+import { createLead, createAuditLog, getLeadByTryonRequestId, prisma } from '@trail/db';
 import { resolveTenantConfig } from '@trail/tenant';
 import { OtpRepository } from './otp.repository';
 import { OtpProvider, OtpProviderResponse } from './otp.interface';
@@ -332,22 +332,257 @@ export class OtpService {
       metadata: { leadId: newLead.id, tryonRequestId: session.tryonRequestId },
     }).catch(() => {});
 
+      session = await this.otpRepository.updateSession(session.id, {
+        customerName,
+        countryCode,
+        phoneNumber,
+        hashedOtp: 'managed-by-verification-hub',
+        expiresAt,
+        status: 'SENT',
+        resendCount: session.resendCount + 1,
+        verificationAttempts: 0,
+        lastSentAt: now,
+        marketingConsent,
+        metadata: metadata || {},
+        providerMessageId: verificationId,
+        provider: 'verification-hub'
+      });
+    } else {
+      session = await this.otpRepository.createSession({
+        tenantId,
+        tryonRequestId,
+        customerName,
+        countryCode,
+        phoneNumber,
+        hashedOtp: 'managed-by-verification-hub',
+        expiresAt,
+        status: 'SENT',
+        resendCount: 0,
+        verificationAttempts: 0,
+        lastSentAt: now,
+        marketingConsent,
+        metadata: metadata || {},
+        providerMessageId: verificationId,
+        provider: 'verification-hub'
+      });
+    }
+
+    await createAuditLog({
+      tenantId,
+      action: 'otp_sent',
+      actor: 'widget',
+      metadata: { tryonRequestId, sessionId: session.id, provider: 'verification-hub' },
+    }).catch(() => {});
+
+    return {
+      otpRequired: true,
+      otpSessionId: session.id,
+      expiresAt: expiresAt.toISOString(),
+      resendAfter: otpConfig.resendCooldown,
+      maskedPhone: maskPhoneNumber(countryCode, phoneNumber, otpConfig.maskPhone),
+    };
+  }
+
+  async resendOtp(tenantId: string, otpSessionId: string) {
+    const session = await this.otpRepository.getSession(otpSessionId);
+    if (!session || session.tenantId !== tenantId) {
+      throw new NotFoundException('OTP session not found or tenant mismatch');
+    }
+
+    const tenantConfig = await resolveTenantConfig(tenantId);
+    const otpConfig = tenantConfig.leadCapture.otpVerification;
+
+    if (session.resendCount >= otpConfig.maxResends) {
+      throw new BadRequestException('Maximum resend attempts reached.');
+    }
+
+    const now = new Date();
+    if (session.lastSentAt) {
+      const diffSeconds = Math.floor((now.getTime() - session.lastSentAt.getTime()) / 1000);
+      if (diffSeconds < otpConfig.resendCooldown) {
+        const waitTime = otpConfig.resendCooldown - diffSeconds;
+        throw new BadRequestException(`Please wait ${waitTime}s before requesting a new code.`);
+      }
+    }
+
+    const identifier = session.countryCode.startsWith('+') ? `${session.countryCode}${session.phoneNumber}` : `+${session.countryCode}${session.phoneNumber}`;
+    
+    let vhRes;
+    try {
+      vhRes = await this.callVerificationHub('/api/v1/verifications', {
+        destination: identifier,
+        channel: 'WHATSAPP'
+      });
+    } catch (err: any) {
+      throw new BadRequestException('Failed to generate verification code. Please try again.');
+    }
+    
+    const verificationId = vhRes.data.id;
+    const expiresAt = new Date(now.getTime() + otpConfig.expirySeconds * 1000);
+
+    await this.otpRepository.updateSession(session.id, {
+      expiresAt,
+      status: 'SENT',
+      resendCount: session.resendCount + 1,
+      verificationAttempts: 0,
+      lastSentAt: now,
+      providerMessageId: verificationId
+    });
+
+    await createAuditLog({
+      tenantId,
+      action: 'otp_resend',
+      actor: 'widget',
+      metadata: { tryonRequestId: session.tryonRequestId, sessionId: session.id },
+    }).catch(() => {});
+
+    await createAuditLog({
+      tenantId,
+      action: 'otp_sent',
+      actor: 'widget',
+      metadata: { tryonRequestId: session.tryonRequestId, sessionId: session.id, provider: 'verification-hub' },
+    }).catch(() => {});
+
+    return {
+      success: true,
+      expiresAt: expiresAt.toISOString(),
+      resendAfter: otpConfig.resendCooldown,
+    };
+  }
+
+  async verifyOtp(tenantId: string, otpSessionId: string, otp: string) {
+    let session = await this.otpRepository.getSession(otpSessionId);
+    if (!session || session.tenantId !== tenantId) {
+      throw new NotFoundException('OTP session not found or tenant mismatch');
+    }
+
+    const tenantConfig = await resolveTenantConfig(tenantId);
+    const otpConfig = tenantConfig.leadCapture.otpVerification;
+    const now = new Date();
+
+    if (now.getTime() > session.expiresAt.getTime()) {
+      await this.otpRepository.updateSession(session.id, { status: 'EXPIRED' });
+      throw new BadRequestException('Verification code expired. Please request a new code.');
+    }
+
+    if (session.verificationAttempts >= otpConfig.maxAttempts) {
+      await this.otpRepository.updateSession(session.id, { status: 'LOCKED' });
+      await this.otpRepository.deleteSession(session.id).catch(() => {});
+      throw new BadRequestException('Maximum verification attempts reached. Please restart.');
+    }
+
+    let vhRes;
+    try {
+      vhRes = await this.callVerificationHub(`/api/v1/verifications/${session.providerMessageId}/validate`, {
+        code: otp
+      });
+    } catch (err: any) {
+      const attempts = session.verificationAttempts + 1;
+      await this.otpRepository.updateSession(session.id, {
+        verificationAttempts: attempts,
+      });
+
+      if (attempts >= otpConfig.maxAttempts) {
+        await this.otpRepository.updateSession(session.id, { status: 'LOCKED' });
+        await this.otpRepository.deleteSession(session.id).catch(() => {});
+        throw new BadRequestException('Maximum verification attempts reached. Please restart.');
+      }
+      throw new BadRequestException('Invalid verification code. Please try again.');
+    }
+
+    if (vhRes.data.status !== 'VERIFIED' && vhRes.data.status !== 'COMPLETED') {
+      const attempts = session.verificationAttempts + 1;
+      await this.otpRepository.updateSession(session.id, { verificationAttempts: attempts });
+      throw new BadRequestException('Invalid verification code. Please try again.');
+    }
+
+    await this.otpRepository.updateSession(session.id, {
+      status: 'VERIFIED',
+      verifiedAt: now,
+    });
+
+    await createAuditLog({
+      tenantId,
+      action: 'otp_verified',
+      actor: 'widget',
+      metadata: { tryonRequestId: session.tryonRequestId, sessionId: session.id },
+    }).catch(() => {});
+
+    const newLead = await createLead({
+      tenantId,
+      tryonRequestId: session.tryonRequestId,
+      customerName: session.customerName,
+      phoneNumber: session.phoneNumber,
+      countryCode: session.countryCode,
+      marketingConsentAt: session.marketingConsent ? now : null,
+      whatsappOptInAt: session.marketingConsent ? now : null,
+      status: 'NEW',
+      metadata: session.metadata || {},
+    });
+
+    await createAuditLog({
+      tenantId,
+      action: 'lead_verified',
+      actor: 'widget',
+      metadata: { leadId: newLead.id, tryonRequestId: session.tryonRequestId },
+    }).catch(() => {});
+
     await this.otpRepository.deleteSession(session.id).catch(() => {});
     await this.redis.del(`tryon:${session.tryonRequestId}:response`);
 
     const unlockToken = generateUnlockToken(tenantId, session.tryonRequestId, appConfig.jwt.secret);
 
+    let customer = await prisma.customer.findUnique({
+      where: {
+        tenantId_countryCode_phone: {
+          tenantId,
+          countryCode: session.countryCode,
+          phone: session.phoneNumber
+        }
+      }
+    });
+
+    if (!customer) {
+      customer = await prisma.customer.create({
+        data: {
+          tenantId,
+          countryCode: session.countryCode,
+          phone: session.phoneNumber,
+        }
+      });
+    }
+
+    const sessionToken = crypto.randomBytes(32).toString('hex');
+    const sessionTokenHash = crypto.createHash('sha256').update(sessionToken).digest('hex');
+
+    const rememberDurationDays = (tenantConfig as any).rememberDurationDays || 30;
+    const expiresAt = new Date(Date.now() + rememberDurationDays * 24 * 60 * 60 * 1000);
+
+    await prisma.customerSession.create({
+      data: {
+        customerId: customer.id,
+        sessionTokenHash,
+        expiresAt,
+      }
+    });
+
+    await prisma.lead.update({
+      where: { id: newLead.id },
+      data: { customerId: customer.id }
+    });
+
     await createAuditLog({
       tenantId,
-      action: 'image_unlocked',
+      action: 'otp_completed',
       actor: 'widget',
-      metadata: { tryonRequestId: session.tryonRequestId },
+      metadata: { tryonRequestId: session.tryonRequestId, sessionId: session.id, customerId: customer.id },
     }).catch(() => {});
 
     return {
       success: true,
-      leadId: newLead.id,
       unlockToken,
+      sessionToken,
+      leadId: newLead.id,
     };
   }
 }

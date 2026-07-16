@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useStore } from './store/useStore';
 import TryOnButton from './components/TryOnButton';
 import Modal from './components/Modal';
+import { checkCustomerSession } from './utils/api';
 
 interface TryOnAppProps {
   tenantId: string;
@@ -17,7 +18,7 @@ const MOCK_CONFIG = {
 
 const TryOnApp: React.FC<TryOnAppProps> = ({ tenantId, productId }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { config, setConfig, runtimeConfig } = useStore();
+  const { config, setConfig, runtimeConfig, setIsTrusted } = useStore();
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -48,6 +49,30 @@ const TryOnApp: React.FC<TryOnAppProps> = ({ tenantId, productId }) => {
       fetchConfig();
     }
   }, [tenantId, setConfig, runtimeConfig.apiUrl, runtimeConfig.useMock, runtimeConfig.debug]);
+
+  useEffect(() => {
+    const verifySession = async () => {
+      const token = localStorage.getItem(`vt_trust_token_${tenantId}`);
+      if (token && (runtimeConfig.apiUrl || runtimeConfig.useMock)) {
+        try {
+          const res = await checkCustomerSession(tenantId, token);
+          if (res.trusted) {
+            setIsTrusted(true);
+            if (res.rotatedToken) {
+              localStorage.setItem(`vt_trust_token_${tenantId}`, res.rotatedToken);
+              if (runtimeConfig.debug) console.log('TryOnWidget: Session token successfully rotated');
+            }
+            if (runtimeConfig.debug) console.log('TryOnWidget: Trusted session recognized');
+          }
+        } catch (e) {
+          // Token invalid, remove it
+          localStorage.removeItem(`vt_trust_token_${tenantId}`);
+          if (runtimeConfig.debug) console.log('TryOnWidget: Trusted session check failed');
+        }
+      }
+    };
+    verifySession();
+  }, [tenantId, runtimeConfig.apiUrl, runtimeConfig.useMock, runtimeConfig.debug, setIsTrusted]);
 
   if (!config) return null;
 
