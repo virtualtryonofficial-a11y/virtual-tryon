@@ -34,7 +34,7 @@ async function runE2ETest() {
 
   console.log('Starting status polling...');
   let attempts = 0;
-  const maxAttempts = 30; // 60 seconds max
+  const maxAttempts = 90; // 180 seconds max
   let completed = false;
 
   while (attempts < maxAttempts && !completed) {

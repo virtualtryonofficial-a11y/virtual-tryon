@@ -192,7 +192,7 @@ export class FitRoomProvider implements VirtualTryOnProvider {
       let taskStatus = (response.data.status || '').toUpperCase();
       let downloadUrl = '';
       let attempts = 0;
-      const maxAttempts = 30; // 60 seconds maximum polling window
+      const maxAttempts = 90; // 180 seconds maximum polling window
 
       while (attempts < maxAttempts) {
         attempts++;

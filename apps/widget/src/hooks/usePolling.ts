@@ -3,7 +3,7 @@ import { useStore } from '../store/useStore';
 import { getTryOnStatus } from '../utils/api';
 
 const POLL_INTERVAL_MS = 3000;
-const MAX_ATTEMPTS = 40;
+const MAX_ATTEMPTS = 80;
 
 const usePolling = (tenantId: string, jobId: string | null) => {
   const { setResult, setError, setStatus, setAwaitingLead } = useStore();
