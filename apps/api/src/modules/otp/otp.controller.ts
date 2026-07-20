@@ -10,8 +10,7 @@ export class OtpController {
 
   @Post('resend')
   @UseGuards(TenantGuard)
-  @SkipThrottle({ tryon: true })
-  @Throttle({ standard: { limit: 10, ttl: 60000 }, burst: { limit: 2, ttl: 1000 } })
+  @SkipThrottle()
   async resendOtp(@Body() dto: ResendOtpDto, @Req() req: any) {
     const tenantId = req.tenant.id;
     return this.otpService.resendOtp(tenantId, dto.otpSessionId);
@@ -19,8 +18,7 @@ export class OtpController {
 
   @Post('verify')
   @UseGuards(TenantGuard)
-  @SkipThrottle({ tryon: true })
-  @Throttle({ standard: { limit: 15, ttl: 60000 }, burst: { limit: 3, ttl: 1000 } })
+  @SkipThrottle()
   async verifyOtp(@Body() dto: VerifyOtpDto, @Req() req: any) {
     const tenantId = req.tenant.id;
     return this.otpService.verifyOtp(tenantId, dto.otpSessionId, dto.otp);

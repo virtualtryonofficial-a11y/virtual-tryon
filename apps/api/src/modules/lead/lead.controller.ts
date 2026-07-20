@@ -14,8 +14,7 @@ export class LeadController {
 
   @Post('leads')
   @UseGuards(TenantGuard)
-  @SkipThrottle({ tryon: true })
-  @Throttle({ standard: { limit: 20, ttl: 60000 }, burst: { limit: 5, ttl: 1000 } })
+  @SkipThrottle()
   async createLead(@Body() dto: CreateLeadDto, @Req() req: any): Promise<LeadResponse> {
     const tenantId = req.tenant.id;
     return this.leadService.createOrUpdateLead(tenantId, dto);
@@ -23,8 +22,7 @@ export class LeadController {
 
   @Post('events')
   @UseGuards(TenantGuard)
-  @SkipThrottle({ tryon: true })
-  @Throttle({ standard: { limit: 100, ttl: 60000 }, burst: { limit: 20, ttl: 1000 } })
+  @SkipThrottle()
   async trackEvent(@Body() dto: TrackEventDto, @Req() req: any) {
     const tenantId = req.tenant.id;
     return this.leadService.trackEvent(tenantId, dto);
@@ -32,8 +30,7 @@ export class LeadController {
 
   @Post('tryon/unlock')
   @UseGuards(TenantGuard)
-  @SkipThrottle({ tryon: true })
-  @Throttle({ standard: { limit: 30, ttl: 60000 }, burst: { limit: 5, ttl: 1000 } })
+  @SkipThrottle()
   async unlockTryon(@Body() dto: UnlockTryonDto, @Req() req: any) {
     const tenantId = req.tenant.id;
     return this.leadService.unlockTryon(tenantId, dto);
