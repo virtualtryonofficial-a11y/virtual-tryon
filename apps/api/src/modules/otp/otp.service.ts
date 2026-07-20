@@ -128,7 +128,8 @@ export class OtpService {
     try {
       vhRes = await this.callVerificationHub('/api/v1/verifications', {
         destination: identifier,
-        channel: 'WHATSAPP'
+        channel: 'WHATSAPP',
+        purpose: 'ADD_TO_CART'
       });
     } catch (err: any) {
       this.logger.error(`Failed to create verification session: ${err.message}`, err.stack);
