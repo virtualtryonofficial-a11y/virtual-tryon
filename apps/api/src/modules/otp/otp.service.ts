@@ -48,9 +48,9 @@ export class OtpService {
 
   constructor(private readonly otpRepository: OtpRepository) {
     this.redis = new Redis(appConfig.redis.url, { maxRetriesPerRequest: null });
-    this.vhUrl = process.env.VERIFICATION_HUB_API_URL || 'https://verification-hub-api.onrender.com';
-    this.vhAccountId = process.env.VERIFICATION_HUB_ACCOUNT_ID || '';
-    this.vhApiKey = process.env.VERIFICATION_HUB_API_KEY || '';
+    this.vhUrl = (process.env.VERIFICATION_HUB_API_URL || 'https://verification-hub-api.onrender.com').replace(/^["']|["']$/g, '').trim();
+    this.vhAccountId = (process.env.VERIFICATION_HUB_ACCOUNT_ID || '').replace(/^["']|["']$/g, '').trim();
+    this.vhApiKey = (process.env.VERIFICATION_HUB_API_KEY || '').replace(/^["']|["']$/g, '').trim();
   }
 
   private async callVerificationHub(endpoint: string, payload: any) {
@@ -131,6 +131,7 @@ export class OtpService {
         channel: 'WHATSAPP'
       });
     } catch (err: any) {
+      this.logger.error(`Failed to create verification session: ${err.message}`, err.stack);
       throw new BadRequestException('Failed to generate verification code. Please try again.');
     }
 
