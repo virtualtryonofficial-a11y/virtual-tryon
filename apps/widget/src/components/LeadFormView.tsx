@@ -127,6 +127,7 @@ const LeadFormView: React.FC = () => {
             }
           } catch (err) {
             console.error('Auto-submit failed', err);
+            localStorage.removeItem('vt_lead_verified');
             setStatus('awaiting_lead');
           }
         }
