@@ -1,5 +1,5 @@
 import { Controller, Post, Body, UseGuards, Req } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { TenantGuard } from '../../guards/tenant.guard';
 import { OtpService } from './otp.service';
 import { ResendOtpDto, VerifyOtpDto } from './otp.dto';
@@ -10,6 +10,7 @@ export class OtpController {
 
   @Post('resend')
   @UseGuards(TenantGuard)
+  @SkipThrottle({ tryon: true })
   @Throttle({ standard: { limit: 10, ttl: 60000 }, burst: { limit: 2, ttl: 1000 } })
   async resendOtp(@Body() dto: ResendOtpDto, @Req() req: any) {
     const tenantId = req.tenant.id;
@@ -18,6 +19,7 @@ export class OtpController {
 
   @Post('verify')
   @UseGuards(TenantGuard)
+  @SkipThrottle({ tryon: true })
   @Throttle({ standard: { limit: 15, ttl: 60000 }, burst: { limit: 3, ttl: 1000 } })
   async verifyOtp(@Body() dto: VerifyOtpDto, @Req() req: any) {
     const tenantId = req.tenant.id;
