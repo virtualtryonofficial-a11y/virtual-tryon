@@ -283,6 +283,7 @@ export class OtpService {
         code: otp
       });
     } catch (err: any) {
+      this.logger.error(`Failed to validate verification code: ${err.message}`, err.stack);
       const attempts = session.verificationAttempts + 1;
       await this.otpRepository.updateSession(session.id, {
         verificationAttempts: attempts,
@@ -293,7 +294,11 @@ export class OtpService {
         await this.otpRepository.deleteSession(session.id).catch(() => {});
         throw new BadRequestException('Maximum verification attempts reached. Please restart.');
       }
-      throw new BadRequestException('Invalid verification code. Please try again.');
+
+      if (err.message && err.message.toLowerCase().includes('expired')) {
+        throw new BadRequestException('Verification code expired. Please request a new code.');
+      }
+      throw new BadRequestException('Invalid verification code. Please check your WhatsApp and try again.');
     }
 
     if (vhRes.data.status !== 'VERIFIED' && vhRes.data.status !== 'COMPLETED') {
