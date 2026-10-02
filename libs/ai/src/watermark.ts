@@ -3,6 +3,7 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 import { getSignedReadUrl } from '@trail/storage';
+import { sharpLock } from './sharp.lock.js';
 
 // Enforce strict memory & thread limits for Render starter instance (max 512MB RAM OOM protection)
 sharp.cache({ memory: 15, files: 2, items: 10 });
@@ -28,10 +29,10 @@ export interface WatermarkMetrics {
   fallbackUsed: boolean;
 }
 
-// In-memory cache for watermark buffers and SVG patterns
 const watermarkBufferCache = new Map<string, { buffer: Buffer; fetchedAt: number }>();
 const svgPatternCache = new Map<string, Buffer>();
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes TTL
+const MAX_SVG_CACHE_SIZE = 50;
 
 function escapeXml(unsafe: string): string {
   return unsafe.replace(/[<>&'"]/g, (c) => {
@@ -98,36 +99,38 @@ class CornerLogoStrategy implements WatermarkStrategy {
     // Opacity (default 85%)
     const opacity = config.opacity && config.opacity >= 0 && config.opacity <= 1 ? config.opacity : 0.85;
 
-    let watermarkPipeline = sharp(watermarkRaw)
-      .resize({ width: targetWidth, withoutEnlargement: true })
-      .ensureAlpha();
+    const compositedBuffer = await sharpLock.runExclusive(async () => {
+      let watermarkPipeline = sharp(watermarkRaw)
+        .resize({ width: targetWidth, withoutEnlargement: true })
+        .ensureAlpha();
 
-    if (opacity < 1) {
-      watermarkPipeline = watermarkPipeline.linear([1, 1, 1, opacity], [0, 0, 0, 0]);
-    }
+      if (opacity < 1) {
+        watermarkPipeline = watermarkPipeline.linear([1, 1, 1, opacity], [0, 0, 0, 0]);
+      }
 
-    const watermarkResizedBuf = await watermarkPipeline.toBuffer();
+      const watermarkResizedBuf = await watermarkPipeline.toBuffer();
 
-    const pos = config.position || 'bottom-right';
-    let gravity: string = 'southeast';
-    let extendOpts = { top: 0, bottom: 28, left: 0, right: 24, background: { r: 0, g: 0, b: 0, alpha: 0 } };
+      const pos = config.position || 'bottom-right';
+      let gravity: string = 'southeast';
+      let extendOpts = { top: 0, bottom: 28, left: 0, right: 24, background: { r: 0, g: 0, b: 0, alpha: 0 } };
 
-    if (pos === 'bottom-left') {
-      gravity = 'southwest';
-      extendOpts = { top: 0, bottom: 28, left: 24, right: 0, background: { r: 0, g: 0, b: 0, alpha: 0 } };
-    } else if (pos === 'bottom-center') {
-      gravity = 'south';
-      extendOpts = { top: 0, bottom: 28, left: 0, right: 0, background: { r: 0, g: 0, b: 0, alpha: 0 } };
-    }
+      if (pos === 'bottom-left') {
+        gravity = 'southwest';
+        extendOpts = { top: 0, bottom: 28, left: 24, right: 0, background: { r: 0, g: 0, b: 0, alpha: 0 } };
+      } else if (pos === 'bottom-center') {
+        gravity = 'south';
+        extendOpts = { top: 0, bottom: 28, left: 0, right: 0, background: { r: 0, g: 0, b: 0, alpha: 0 } };
+      }
 
-    const paddedWatermarkBuf = await sharp(watermarkResizedBuf)
-      .extend(extendOpts)
-      .toBuffer();
+      const paddedWatermarkBuf = await sharp(watermarkResizedBuf)
+        .extend(extendOpts)
+        .toBuffer();
 
-    const compositedBuffer = await mainImg
-      .composite([{ input: paddedWatermarkBuf, gravity: gravity as any }])
-      .jpeg({ quality: 92 })
-      .toBuffer();
+      return await mainImg
+        .composite([{ input: paddedWatermarkBuf, gravity: gravity as any }])
+        .jpeg({ quality: 92 })
+        .toBuffer();
+    });
 
     return {
       buffer: compositedBuffer,
@@ -202,13 +205,18 @@ class PatternTextStrategy implements WatermarkStrategy {
   <rect width="100%" height="100%" fill="url(#wm)" mask="url(#face-mask)" />
 </svg>`;
       overlayBuffer = Buffer.from(svgString);
+      if (svgPatternCache.size >= MAX_SVG_CACHE_SIZE) {
+        svgPatternCache.clear();
+      }
       svgPatternCache.set(cacheKey, overlayBuffer);
     }
 
-    const compositedBuffer = await mainImg
-      .composite([{ input: overlayBuffer, blend: 'over' }])
-      .jpeg({ quality: 90 })
-      .toBuffer();
+    const compositedBuffer = await sharpLock.runExclusive(() => 
+      mainImg
+        .composite([{ input: overlayBuffer, blend: 'over' }])
+        .jpeg({ quality: 90 })
+        .toBuffer()
+    );
 
     return {
       buffer: compositedBuffer,
@@ -272,10 +280,12 @@ class PatternLogoStrategy implements WatermarkStrategy {
     } else {
       const logoRaw = await fetchWatermarkBuffer(activeKey);
       const targetLogoW = Math.round(spacing * 0.58);
-      const resizedLogo = await sharp(logoRaw)
-        .resize({ width: targetLogoW, withoutEnlargement: true })
-        .png()
-        .toBuffer();
+      const resizedLogo = await sharpLock.runExclusive(() =>
+        sharp(logoRaw)
+          .resize({ width: targetLogoW, withoutEnlargement: true })
+          .png()
+          .toBuffer()
+      );
       const logoBase64 = resizedLogo.toString('base64');
       const offset = Math.round((spacing - targetLogoW) / 2);
 
@@ -295,13 +305,18 @@ class PatternLogoStrategy implements WatermarkStrategy {
   <rect width="100%" height="100%" fill="url(#wm)" mask="url(#face-mask)" />
 </svg>`;
       overlayBuffer = Buffer.from(svgString);
+      if (svgPatternCache.size >= MAX_SVG_CACHE_SIZE) {
+        svgPatternCache.clear();
+      }
       svgPatternCache.set(cacheKey, overlayBuffer);
     }
 
-    const compositedBuffer = await mainImg
-      .composite([{ input: overlayBuffer, blend: 'over' }])
-      .jpeg({ quality: 90 })
-      .toBuffer();
+    const compositedBuffer = await sharpLock.runExclusive(() =>
+      mainImg
+        .composite([{ input: overlayBuffer, blend: 'over' }])
+        .jpeg({ quality: 90 })
+        .toBuffer()
+    );
 
     return {
       buffer: compositedBuffer,

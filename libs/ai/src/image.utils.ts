@@ -1,4 +1,5 @@
 import sharp from 'sharp';
+import { sharpLock } from './sharp.lock.js';
 
 // Enforce strict memory & thread limits for Render starter instance (max 512MB RAM OOM protection)
 sharp.cache({ memory: 15, files: 2, items: 10 });
@@ -7,15 +8,17 @@ sharp.concurrency(1);
 export async function compressForTryOn(inputBuffer: Buffer): Promise<Buffer> {
   const originalSize = inputBuffer.length;
   
-  const compressed = await sharp(inputBuffer)
-    .resize({ 
-      width: 1024, 
-      height: 1024, 
-      fit: 'inside', 
-      withoutEnlargement: true 
-    })
-    .jpeg({ quality: 85, mozjpeg: true })
-    .toBuffer();
+  const compressed = await sharpLock.runExclusive(() => 
+    sharp(inputBuffer)
+      .resize({ 
+        width: 1024, 
+        height: 1024, 
+        fit: 'inside', 
+        withoutEnlargement: true 
+      })
+      .jpeg({ quality: 85, mozjpeg: true })
+      .toBuffer()
+  );
 
   const compressedSize = compressed.length;
   const reduction = ((originalSize - compressedSize) / originalSize * 100).toFixed(2);
@@ -40,8 +43,10 @@ export function validateUserImage(buffer: Buffer): void {
 }
 
 export async function blurImage(inputBuffer: Buffer, blurRadius = 25, quality = 60): Promise<Buffer> {
-  return sharp(inputBuffer)
-    .blur(blurRadius)
-    .jpeg({ quality })
-    .toBuffer();
+  return sharpLock.runExclusive(() => 
+    sharp(inputBuffer)
+      .blur(blurRadius)
+      .jpeg({ quality })
+      .toBuffer()
+  );
 }

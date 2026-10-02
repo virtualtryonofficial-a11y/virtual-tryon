@@ -3,6 +3,7 @@ import { z } from 'zod';
 import * as Sentry from '@sentry/node';
 import pino from 'pino';
 import sharp from 'sharp';
+import { sharpLock } from '../sharp.lock.js';
 
 // Enforce strict memory & thread limits for Render starter instance (max 512MB RAM OOM protection)
 sharp.cache({ memory: 15, files: 2, items: 10 });
@@ -99,7 +100,7 @@ export class FitRoomProvider implements VirtualTryOnProvider {
       const modelRes = await axios.get(input.modelImage, { responseType: 'arraybuffer', timeout: 15000 });
       let modelBuffer = Buffer.from(modelRes.data);
       try {
-        modelBuffer = await sharp(modelBuffer).jpeg().toBuffer();
+        modelBuffer = await sharpLock.runExclusive(() => sharp(modelBuffer).jpeg().toBuffer());
       } catch (err: any) {
         logger.warn({ provider: providerName, error: err.message }, 'Failed converting model image to JPEG, using raw bytes');
       }
@@ -109,7 +110,7 @@ export class FitRoomProvider implements VirtualTryOnProvider {
       const garmentRes = await axios.get(input.garmentImage, { responseType: 'arraybuffer', timeout: 15000 });
       let garmentBuffer = Buffer.from(garmentRes.data);
       try {
-        garmentBuffer = await sharp(garmentBuffer).jpeg().toBuffer();
+        garmentBuffer = await sharpLock.runExclusive(() => sharp(garmentBuffer).jpeg().toBuffer());
       } catch (err: any) {
         logger.warn({ provider: providerName, error: err.message }, 'Failed converting garment image to JPEG, using raw bytes');
       }
