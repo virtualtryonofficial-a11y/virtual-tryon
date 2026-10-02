@@ -33,6 +33,7 @@ const watermarkBufferCache = new Map<string, { buffer: Buffer; fetchedAt: number
 const svgPatternCache = new Map<string, Buffer>();
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes TTL
 const MAX_SVG_CACHE_SIZE = 50;
+const MAX_WATERMARK_CACHE_SIZE = 10;
 
 function escapeXml(unsafe: string): string {
   return unsafe.replace(/[<>&'"]/g, (c) => {
@@ -69,6 +70,9 @@ async function fetchWatermarkBuffer(keyOrUrl: string): Promise<Buffer> {
     buffer = Buffer.from(res.data);
   }
 
+  if (watermarkBufferCache.size >= MAX_WATERMARK_CACHE_SIZE) {
+    watermarkBufferCache.clear();
+  }
   watermarkBufferCache.set(keyOrUrl, { buffer, fetchedAt: now });
   return buffer;
 }
@@ -99,38 +103,36 @@ class CornerLogoStrategy implements WatermarkStrategy {
     // Opacity (default 85%)
     const opacity = config.opacity && config.opacity >= 0 && config.opacity <= 1 ? config.opacity : 0.85;
 
-    const compositedBuffer = await sharpLock.runExclusive(async () => {
-      let watermarkPipeline = sharp(watermarkRaw)
-        .resize({ width: targetWidth, withoutEnlargement: true })
-        .ensureAlpha();
+    let watermarkPipeline = sharp(watermarkRaw)
+      .resize({ width: targetWidth, withoutEnlargement: true })
+      .ensureAlpha();
 
-      if (opacity < 1) {
-        watermarkPipeline = watermarkPipeline.linear([1, 1, 1, opacity], [0, 0, 0, 0]);
-      }
+    if (opacity < 1) {
+      watermarkPipeline = watermarkPipeline.linear([1, 1, 1, opacity], [0, 0, 0, 0]);
+    }
 
-      const watermarkResizedBuf = await watermarkPipeline.toBuffer();
+    const watermarkResizedBuf = await watermarkPipeline.toBuffer();
 
-      const pos = config.position || 'bottom-right';
-      let gravity: string = 'southeast';
-      let extendOpts = { top: 0, bottom: 28, left: 0, right: 24, background: { r: 0, g: 0, b: 0, alpha: 0 } };
+    const pos = config.position || 'bottom-right';
+    let gravity: string = 'southeast';
+    let extendOpts = { top: 0, bottom: 28, left: 0, right: 24, background: { r: 0, g: 0, b: 0, alpha: 0 } };
 
-      if (pos === 'bottom-left') {
-        gravity = 'southwest';
-        extendOpts = { top: 0, bottom: 28, left: 24, right: 0, background: { r: 0, g: 0, b: 0, alpha: 0 } };
-      } else if (pos === 'bottom-center') {
-        gravity = 'south';
-        extendOpts = { top: 0, bottom: 28, left: 0, right: 0, background: { r: 0, g: 0, b: 0, alpha: 0 } };
-      }
+    if (pos === 'bottom-left') {
+      gravity = 'southwest';
+      extendOpts = { top: 0, bottom: 28, left: 24, right: 0, background: { r: 0, g: 0, b: 0, alpha: 0 } };
+    } else if (pos === 'bottom-center') {
+      gravity = 'south';
+      extendOpts = { top: 0, bottom: 28, left: 0, right: 0, background: { r: 0, g: 0, b: 0, alpha: 0 } };
+    }
 
-      const paddedWatermarkBuf = await sharp(watermarkResizedBuf)
-        .extend(extendOpts)
-        .toBuffer();
+    const paddedWatermarkBuf = await sharp(watermarkResizedBuf)
+      .extend(extendOpts)
+      .toBuffer();
 
-      return await mainImg
-        .composite([{ input: paddedWatermarkBuf, gravity: gravity as any }])
-        .jpeg({ quality: 92 })
-        .toBuffer();
-    });
+    const compositedBuffer = await mainImg
+      .composite([{ input: paddedWatermarkBuf, gravity: gravity as any }])
+      .jpeg({ quality: 92 })
+      .toBuffer();
 
     return {
       buffer: compositedBuffer,
@@ -211,12 +213,10 @@ class PatternTextStrategy implements WatermarkStrategy {
       svgPatternCache.set(cacheKey, overlayBuffer);
     }
 
-    const compositedBuffer = await sharpLock.runExclusive(() => 
-      mainImg
-        .composite([{ input: overlayBuffer, blend: 'over' }])
-        .jpeg({ quality: 90 })
-        .toBuffer()
-    );
+    const compositedBuffer = await mainImg
+      .composite([{ input: overlayBuffer, blend: 'over' }])
+      .jpeg({ quality: 90 })
+      .toBuffer();
 
     return {
       buffer: compositedBuffer,
@@ -280,12 +280,10 @@ class PatternLogoStrategy implements WatermarkStrategy {
     } else {
       const logoRaw = await fetchWatermarkBuffer(activeKey);
       const targetLogoW = Math.round(spacing * 0.58);
-      const resizedLogo = await sharpLock.runExclusive(() =>
-        sharp(logoRaw)
-          .resize({ width: targetLogoW, withoutEnlargement: true })
-          .png()
-          .toBuffer()
-      );
+      const resizedLogo = await sharp(logoRaw)
+        .resize({ width: targetLogoW, withoutEnlargement: true })
+        .png()
+        .toBuffer();
       const logoBase64 = resizedLogo.toString('base64');
       const offset = Math.round((spacing - targetLogoW) / 2);
 
@@ -311,12 +309,10 @@ class PatternLogoStrategy implements WatermarkStrategy {
       svgPatternCache.set(cacheKey, overlayBuffer);
     }
 
-    const compositedBuffer = await sharpLock.runExclusive(() =>
-      mainImg
-        .composite([{ input: overlayBuffer, blend: 'over' }])
-        .jpeg({ quality: 90 })
-        .toBuffer()
-    );
+    const compositedBuffer = await mainImg
+      .composite([{ input: overlayBuffer, blend: 'over' }])
+      .jpeg({ quality: 90 })
+      .toBuffer();
 
     return {
       buffer: compositedBuffer,
@@ -364,55 +360,59 @@ export async function applyWatermarkWithMetrics(
   }
 
   try {
-    const mainImg = sharp(mainImageBuffer);
-    const mainMeta = await mainImg.metadata();
+    return await sharpLock.runExclusive(async () => {
+      const mainImg = sharp(mainImageBuffer);
+      const mainMeta = await mainImg.metadata();
 
-    let strategy: WatermarkStrategy;
-    switch (type) {
-      case 'pattern-text':
-        strategy = new PatternTextStrategy();
-        break;
-      case 'pattern-logo':
-        strategy = new PatternLogoStrategy();
-        break;
-      case 'hybrid':
-        strategy = new HybridStrategy();
-        break;
-      case 'corner-logo':
-      default:
-        strategy = new CornerLogoStrategy();
-        break;
-    }
-
-    const result = await strategy.execute(mainImageBuffer, mainImg, mainMeta, config);
-    const durationMs = Date.now() - start;
-
-    return {
-      buffer: result.buffer,
-      metrics: {
-        ...baseMetrics,
-        ...result.metrics,
-        durationMs,
+      let strategy: WatermarkStrategy;
+      switch (type) {
+        case 'pattern-text':
+          strategy = new PatternTextStrategy();
+          break;
+        case 'pattern-logo':
+          strategy = new PatternLogoStrategy();
+          break;
+        case 'hybrid':
+          strategy = new HybridStrategy();
+          break;
+        case 'corner-logo':
+        default:
+          strategy = new CornerLogoStrategy();
+          break;
       }
-    };
+
+      const result = await strategy.execute(mainImageBuffer, mainImg, mainMeta, config);
+      const durationMs = Date.now() - start;
+
+      return {
+        buffer: result.buffer,
+        metrics: {
+          ...baseMetrics,
+          ...result.metrics,
+          durationMs,
+        }
+      };
+    });
   } catch (err: any) {
     console.warn(`[Watermark Error]: Failed to apply watermark strategy (${type}). Attempting auto-fallback to pattern-text. Error: ${err.message}`);
     if (type !== 'pattern-text') {
       try {
-        const fallbackStrategy = new PatternTextStrategy();
-        const mainImg = sharp(mainImageBuffer);
-        const mainMeta = await mainImg.metadata();
-        const fallbackRes = await fallbackStrategy.execute(mainImageBuffer, mainImg, mainMeta, config);
-        return {
-          buffer: fallbackRes.buffer,
-          metrics: {
-            ...baseMetrics,
-            watermarkType: 'pattern-text',
-            ...fallbackRes.metrics,
-            durationMs: Date.now() - start,
-            fallbackUsed: true,
-          }
-        };
+        return await sharpLock.runExclusive(async () => {
+          const fallbackStrategy = new PatternTextStrategy();
+          const mainImg = sharp(mainImageBuffer);
+          const mainMeta = await mainImg.metadata();
+          const fallbackRes = await fallbackStrategy.execute(mainImageBuffer, mainImg, mainMeta, config);
+          return {
+            buffer: fallbackRes.buffer,
+            metrics: {
+              ...baseMetrics,
+              watermarkType: 'pattern-text',
+              ...fallbackRes.metrics,
+              durationMs: Date.now() - start,
+              fallbackUsed: true,
+            }
+          };
+        });
       } catch (fallbackErr) {
         // Fallback also failed
       }

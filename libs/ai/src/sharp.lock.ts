@@ -36,5 +36,6 @@ export class Semaphore {
 }
 
 // Global semaphore for all Sharp operations in the monolithic process
-// Ensures that only 1 image processing operation occurs at a time globally
-export const sharpLock = new Semaphore(1);
+// Ensures that up to 3 image processing operations can occur concurrently.
+// This balances throughput (API uploads) with memory protection (<512MB RAM).
+export const sharpLock = new Semaphore(3);
