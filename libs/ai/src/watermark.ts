@@ -232,6 +232,7 @@ class PatternTextStrategy implements WatermarkStrategy {
 class PatternLogoStrategy implements WatermarkStrategy {
   async execute(mainBuffer: Buffer, mainImg: sharp.Sharp, mainMeta: sharp.Metadata, config: WatermarkConfig) {
     let keyOrUrl = config.keyOrUrl;
+    let activeKey = keyOrUrl;
     if (!keyOrUrl || (!fs.existsSync(keyOrUrl) && !keyOrUrl.startsWith('http') && !keyOrUrl.startsWith('data:'))) {
       const candidates = [
         keyOrUrl,
@@ -252,7 +253,7 @@ class PatternLogoStrategy implements WatermarkStrategy {
         }
       }
       if (found) {
-        keyOrUrl = found;
+        activeKey = found;
       } else {
         throw new Error('No valid pattern logo PNG found in monorepo paths');
       }
@@ -270,7 +271,6 @@ class PatternLogoStrategy implements WatermarkStrategy {
     const rawRotation = config.rotation ?? -30;
     const rotation = Math.min(90, Math.max(-90, rawRotation));
 
-    const activeKey = keyOrUrl;
     const cacheKey = `logo_${config.tenantId || 'anon'}_${activeKey}_${rotation}_${spacing}_${opacity}_${mainWidth}x${mainHeight}`;
     let overlayBuffer = svgPatternCache.get(cacheKey);
     let svgCacheHit = false;
@@ -278,7 +278,7 @@ class PatternLogoStrategy implements WatermarkStrategy {
     if (overlayBuffer) {
       svgCacheHit = true;
     } else {
-      const logoRaw = await fetchWatermarkBuffer(activeKey);
+      const logoRaw = await fetchWatermarkBuffer(activeKey as string);
       const targetLogoW = Math.round(spacing * 0.58);
       const resizedLogo = await sharp(logoRaw)
         .resize({ width: targetLogoW, withoutEnlargement: true })
@@ -360,6 +360,12 @@ export async function applyWatermarkWithMetrics(
   }
 
   try {
+    // PRE-FETCH network assets OUTSIDE the lock to prevent stalling the process-wide semaphore
+    let preFetchedBuffer: Buffer | null = null;
+    if (config.keyOrUrl && (type === 'corner-logo' || type === 'pattern-logo')) {
+      preFetchedBuffer = await fetchWatermarkBuffer(config.keyOrUrl);
+    }
+
     return await sharpLock.runExclusive(async () => {
       const mainImg = sharp(mainImageBuffer);
       const mainMeta = await mainImg.metadata();
@@ -380,6 +386,12 @@ export async function applyWatermarkWithMetrics(
           strategy = new CornerLogoStrategy();
           break;
       }
+
+      // We pass the preFetchedBuffer to the config or handle it inside the strategy.
+      // But wait, the strategy fetchWatermarkBuffer is already cached!
+      // If we fetch it here, it gets placed in `watermarkBufferCache`.
+      // So when the strategy calls `fetchWatermarkBuffer(config.keyOrUrl)`, it will instantly return the cached buffer!
+      // Thus, NO network operation happens inside the lock.
 
       const result = await strategy.execute(mainImageBuffer, mainImg, mainMeta, config);
       const durationMs = Date.now() - start;

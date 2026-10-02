@@ -27,6 +27,10 @@ async function bootstrap() {
   });
 
   // Exported for Bull Board or other monitoring if needed
+  // IMPORTANT: 512 MB Memory Validation Dependency
+  // The memory safety of the process-wide Semaphore(3) relies entirely on
+  // TryonWorker concurrency remaining strictly at 1. Increasing worker concurrency
+  // invalidates the memory model and will likely cause an OOM on 512 MB runtimes.
   const tryonWorker = new Worker(
     QUEUE_NAMES.TRYON,
     processTryOn,
